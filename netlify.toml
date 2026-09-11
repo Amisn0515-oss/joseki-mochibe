@@ -1,0 +1,21 @@
+# Netlify に「このファイルはこう配りなさい」と伝えるための設定。
+# 触る必要はほぼありません。
+
+# アプリの名札。種別を正しく伝えないと、iPhoneがアプリ情報を読み落とすことがある
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json; charset=utf-8"
+
+# オフライン用の係。ここが古いまま残ると更新が届かなくなるので、毎回取りに行かせる
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Content-Type = "text/javascript; charset=utf-8"
+    Cache-Control = "no-cache"
+
+# 本体も、開くたびに新しいかどうか確かめさせる
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"

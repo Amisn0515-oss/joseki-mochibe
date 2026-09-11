@@ -1,0 +1,137 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>アイコンを作り直す</title>
+<style>
+  body{margin:0;padding:28px 20px 60px;background:#F3EFFB;color:#221B36;
+    font:15px/1.8 "Zen Kaku Gothic New",-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}
+  .wrap{max-width:620px;margin:0 auto}
+  h1{font-size:22px;margin:0 0 6px}
+  p{margin:10px 0;color:#57496F}
+  code{background:#E9E2F8;border-radius:5px;padding:1px 6px;font-size:.9em}
+  .prev{display:flex;align-items:center;gap:18px;margin:22px 0;flex-wrap:wrap}
+  .prev svg{width:180px;height:180px;border-radius:38px;box-shadow:0 6px 18px -6px #6B54B855}
+  .prev svg.small{width:60px;height:60px;border-radius:13px}
+  .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+  a.dl{display:inline-block;background:#6B54B8;color:#fff;text-decoration:none;
+    padding:11px 18px;border-radius:10px;font-weight:700}
+  a.dl:hover{background:#5843A0}
+  .note{border-left:3px solid #6B54B8;background:#EDE7FD;padding:12px 16px;
+    border-radius:0 10px 10px 0;margin:22px 0;font-size:14px}
+</style>
+
+<div class="wrap">
+<h1>アイコンを作り直す</h1>
+<p>下の絵を書きかえて、ボタンを押すと3枚のPNGができます。
+できたファイルを <code>joseki-mochibe</code> フォルダに上書きしてください。</p>
+
+<div class="prev">
+  <!-- ここを直すとアイコンが変わります -->
+  <svg id="src" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+    <defs>
+      <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stop-color="#BFE0FF"/>
+        <stop offset="48%"  stop-color="#DCC9FA"/>
+        <stop offset="100%" stop-color="#FFD1E7"/>
+      </linearGradient>
+      <radialGradient id="glow" cx="50%" cy="62%" r="55%">
+        <stop offset="0%"   stop-color="#FFFFFF" stop-opacity=".75"/>
+        <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+      </radialGradient>
+      <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stop-color="#FFFFFF"/>
+        <stop offset="62%"  stop-color="#FFF4FA"/>
+        <stop offset="100%" stop-color="#FFE0EF"/>
+      </linearGradient>
+    </defs>
+
+    <rect width="512" height="512" fill="url(#sky)"/>
+    <circle cx="256" cy="318" r="200" fill="url(#glow)"/>
+
+    <g fill="#FFF3C4">
+      <path d="M78 96 l9 26 26 9 -26 9 -9 26 -9 -26 -26 -9 26 -9z"/>
+      <path d="M432 132 l7 20 20 7 -20 7 -7 20 -7 -20 -20 -7 20 -7z"/>
+      <path d="M404 402 l6 17 17 6 -17 6 -6 17 -6 -17 -17 -6 17 -6z"/>
+    </g>
+
+    <g stroke="#4B3A80" stroke-width="13" fill="url(#body)">
+      <ellipse cx="200" cy="150" rx="30" ry="80" transform="rotate(-9 200 150)"/>
+      <ellipse cx="312" cy="150" rx="30" ry="80" transform="rotate(9 312 150)"/>
+    </g>
+    <g fill="#FFC2DC">
+      <ellipse cx="200" cy="152" rx="13" ry="52" transform="rotate(-9 200 152)"/>
+      <ellipse cx="312" cy="152" rx="13" ry="52" transform="rotate(9 312 152)"/>
+    </g>
+
+    <path d="M 88 404
+             C 70 330, 96 250, 140 224
+             Q 256 168, 372 224
+             C 416 250, 442 330, 424 404
+             Q 256 436, 88 404 Z"
+          fill="url(#body)" stroke="#4B3A80" stroke-width="13" stroke-linejoin="round"/>
+
+    <ellipse cx="206" cy="300" rx="15" ry="19" fill="#3A2C66"/>
+    <ellipse cx="306" cy="300" rx="15" ry="19" fill="#3A2C66"/>
+    <circle  cx="212" cy="292" r="5.5" fill="#fff"/>
+    <circle  cx="312" cy="292" r="5.5" fill="#fff"/>
+    <ellipse cx="160" cy="330" rx="24" ry="15" fill="#FF9FC8" opacity=".62"/>
+    <ellipse cx="352" cy="330" rx="24" ry="15" fill="#FF9FC8" opacity=".62"/>
+    <path d="M232 338 Q256 359 280 338" stroke="#3A2C66" stroke-width="9"
+          fill="none" stroke-linecap="round"/>
+
+    <circle cx="196" cy="424" r="30" fill="#3A2C66" stroke="#4B3A80" stroke-width="9"/>
+    <circle cx="316" cy="424" r="30" fill="#FFFFFF" stroke="#4B3A80" stroke-width="9"/>
+  </svg>
+
+  <div>
+    <div id="mini"></div>
+    <p style="font-size:13px;margin-top:6px">← ホーム画面ではこのくらいの大きさです</p>
+  </div>
+</div>
+
+<div class="btns" id="btns"></div>
+
+<div class="note">
+<b>ファイル名は変えないでください。</b>
+<code>icon-192.png</code> <code>icon-512.png</code> <code>apple-touch-icon.png</code> の3枚を、
+そのままの名前で上書きします。名前が変わると読み込まれません。
+</div>
+</div>
+
+<script>
+const svgEl = document.getElementById('src');
+// 小さいときの見え方を確かめるための複製
+const mini = svgEl.cloneNode(true);
+mini.removeAttribute('id'); mini.classList.add('small');
+document.getElementById('mini').appendChild(mini);
+
+const render = (size) => new Promise((res, rej) => {
+  const img = new Image();
+  img.onload = () => {
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    const g = c.getContext('2d');
+    g.imageSmoothingQuality = 'high';
+    g.drawImage(img, 0, 0, size, size);
+    c.toBlob(b => res(b), 'image/png');
+  };
+  img.onerror = rej;
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgEl.outerHTML);
+});
+
+const wanted = [['icon-512.png', 512], ['icon-192.png', 192], ['apple-touch-icon.png', 180]];
+const box = document.getElementById('btns');
+for (const [name, size] of wanted) {
+  const a = document.createElement('a');
+  a.className = 'dl'; a.textContent = name + ' をダウンロード';
+  a.href = '#';
+  a.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const blob = await render(size);
+    const url = URL.createObjectURL(blob);
+    const t = document.createElement('a');
+    t.href = url; t.download = name; t.click();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  });
+  box.appendChild(a);
+}
+</script>

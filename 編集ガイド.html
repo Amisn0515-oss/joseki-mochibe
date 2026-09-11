@@ -1,0 +1,518 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>定石モチベ 編集ガイド</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap">
+
+<style>
+:root{
+  --paper:#FBF9FE; --paper-2:#F3EFFB; --card:#FFFFFF;
+  --ink:#221B36; --ink-2:#57496F; --ink-3:#8B7FA6;
+  --line:#E4DDF2; --line-2:#D3C9E8;
+  --accent:#6B54B8; --accent-soft:#EDE7FD;
+  --good:#2C7F66; --good-soft:#E2F3ED;
+  --warn:#A93A61; --warn-soft:#FBE7EE;
+  --code:#F4F0FC; --code-line:#E0D7F3;
+  --chip:#EDE7FD;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#161227; --paper-2:#1E1934; --card:#1E1934;
+    --ink:#EFEAFA; --ink-2:#BDB1DA; --ink-3:#8E82AE;
+    --line:#2E2748; --line-2:#3D3460;
+    --accent:#A992F0; --accent-soft:#2A2247;
+    --good:#6DCBAC; --good-soft:#17342C;
+    --warn:#F090AF; --warn-soft:#3A1F2B;
+    --code:#221C3B; --code-line:#332B54;
+    --chip:#2A2247;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#161227; --paper-2:#1E1934; --card:#1E1934;
+  --ink:#EFEAFA; --ink-2:#BDB1DA; --ink-3:#8E82AE;
+  --line:#2E2748; --line-2:#3D3460;
+  --accent:#A992F0; --accent-soft:#2A2247;
+  --good:#6DCBAC; --good-soft:#17342C;
+  --warn:#F090AF; --warn-soft:#3A1F2B;
+  --code:#221C3B; --code-line:#332B54;
+  --chip:#2A2247;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:"Zen Kaku Gothic New",-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;
+  line-height:1.85; font-size:15px; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:760px;margin:0 auto;padding:44px 22px 90px}
+h1,h2,h3{font-family:"Zen Maru Gothic",sans-serif;margin:0;text-wrap:balance;line-height:1.4}
+h1{font-size:31px;font-weight:900;letter-spacing:.01em}
+h2{font-size:21px;font-weight:900;margin:52px 0 4px;padding-top:22px;border-top:2px solid var(--line)}
+h3{font-size:16.5px;font-weight:700;margin:0}
+p{margin:12px 0}
+code,pre,.mono{font-family:"DM Mono","Zen Kaku Gothic New",monospace;font-variant-ligatures:none}
+
+.lede{color:var(--ink-2);font-size:16px;margin:10px 0 0;max-width:60ch}
+.hdr{border-bottom:2px solid var(--line);padding-bottom:26px}
+.kicker{font-family:"DM Mono",monospace;font-size:11.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:9px}
+
+/* 目次 */
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin:26px 0 0}
+.toc a{font-size:13px;text-decoration:none;color:var(--accent);background:var(--accent-soft);
+  border:1px solid var(--line-2);border-radius:99px;padding:4px 13px;transition:.15s}
+.toc a:hover{background:var(--accent);color:#fff}
+
+/* 手順 */
+.steps{list-style:none;padding:0;margin:18px 0;counter-reset:s;display:flex;
+  flex-direction:column;gap:14px}
+.steps li{counter-increment:s;position:relative;padding-left:44px}
+.steps li::before{content:counter(s);position:absolute;left:0;top:2px;width:29px;height:29px;
+  display:grid;place-items:center;border-radius:50%;background:var(--accent);color:#fff;
+  font-family:"DM Mono",monospace;font-size:14px}
+.steps b{display:block;font-family:"Zen Maru Gothic",sans-serif;font-size:15.5px}
+
+/* レシピカード */
+.recipe{background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:18px 19px;margin:16px 0}
+.recipe-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+  flex-wrap:wrap;margin-bottom:6px}
+.where{font-family:"DM Mono",monospace;font-size:12px;color:var(--accent);
+  background:var(--chip);border-radius:6px;padding:2px 9px;white-space:nowrap;flex-shrink:0}
+
+pre{background:var(--code);border:1px solid var(--code-line);border-radius:10px;
+  padding:13px 15px;overflow-x:auto;font-size:12.5px;line-height:1.85;margin:12px 0}
+pre code{background:none;padding:0;border:none;font-size:inherit}
+code{background:var(--code);border:1px solid var(--code-line);border-radius:5px;
+  padding:1px 5px;font-size:.88em}
+
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px}
+.scroll{overflow-x:auto}
+th,td{text-align:left;padding:8px 11px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:"Zen Maru Gothic",sans-serif;font-size:12.5px;color:var(--ink-3);
+  border-bottom:2px solid var(--line-2);white-space:nowrap}
+td:first-child{font-family:"DM Mono",monospace;font-size:12.5px;color:var(--accent);
+  white-space:nowrap;font-variant-numeric:tabular-nums}
+
+.note{border-left:3px solid var(--accent);background:var(--accent-soft);
+  border-radius:0 10px 10px 0;padding:12px 16px;margin:16px 0;font-size:14px}
+.note.warn{border-left-color:var(--warn);background:var(--warn-soft)}
+.note.good{border-left-color:var(--good);background:var(--good-soft)}
+.note b{font-family:"Zen Maru Gothic",sans-serif}
+
+dl{margin:14px 0}
+dt{font-family:"DM Mono",monospace;font-size:13px;color:var(--accent);margin-top:13px}
+dd{margin:2px 0 0;color:var(--ink-2);font-size:14px}
+
+ul.plain{padding-left:20px;margin:10px 0}
+ul.plain li{margin:5px 0}
+.f{color:var(--ink-3);font-size:13px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+
+<header class="hdr">
+  <div class="kicker">JOSEKI MOCHIBE</div>
+  <h1>自分で直すための地図</h1>
+  <p class="lede">定石モチベは <b>HTML 1枚</b>でできています。インストールもビルドも要りません。
+  ファイルを開いて、直して、保存して、ブラウザを更新する。それだけで反映されます。</p>
+  <div class="toc">
+    <a href="#start">はじめかた</a>
+    <a href="#map">ファイルの地図</a>
+    <a href="#recipe">やりたいこと別</a>
+    <a href="#broke">壊したときは</a>
+    <a href="#safe">戻せるように</a>
+    <a href="#words">用語</a>
+  </div>
+</header>
+
+<h2 id="start">はじめかた</h2>
+
+<ol class="steps">
+  <li><b>ファイルを開く</b>
+    VS Code を開いて、<code>ファイル → フォルダーを開く</code> で
+    <code>デスクトップ\joseki-mochibe</code> を選ぶ。左の一覧から <code>index.html</code> をクリック。</li>
+  <li><b>直して保存する</b>
+    書き換えたら <code>Ctrl</code>+<code>S</code>。</li>
+  <li><b>ブラウザで見る</b>
+    エクスプローラーで <code>index.html</code> をダブルクリックするとブラウザで開きます。
+    以降は保存するたびに、そのタブで <code>Ctrl</code>+<code>R</code>（更新）を押せば反映されます。</li>
+</ol>
+
+<div class="note">
+<b>進捗が残らないときがあります。</b>
+ファイルを直接開くと、ブラウザによっては「解いた数」の保存が効きません。
+見た目と動きの確認はできるので、編集中はこれで十分です。
+実際の練習は公開版のURLのほうを使ってください。壊れているわけではありません。
+</div>
+
+<h2 id="map">ファイルの地図</h2>
+
+<p>1785行あります。ただし塊は2つだけです。<br>
+<b>前半が見た目（CSS）、後半が動き（JavaScript）</b>。この境目さえ分かれば迷いません。</p>
+
+<div class="note">
+<b>行番号は目安です。</b>直すたびにずれていきます。合わなくなったら、
+VS Code で <code>Ctrl</code>+<code>F</code> を押して、右の<b>探す言葉</b>を貼り付けてください。
+こちらは変わりません。
+</div>
+
+<div class="scroll">
+<table>
+<thead><tr><th>行</th><th>なにが書いてあるか</th><th>探す言葉</th></tr></thead>
+<tbody>
+<tr><td>1–7</td><td>読み込む書体の指定</td><td><code>fonts.googleapis</code></td></tr>
+<tr><td>8</td><td><code>&lt;style&gt;</code> ここから見た目</td><td><code>&lt;style&gt;</code></td></tr>
+<tr><td>21</td><td><b>昼の色</b>。色の名前をここでまとめて決めている</td><td><code>ひるまのゆめ</code></td></tr>
+<tr><td>42 / 54</td><td>夜の色。同じ名前をもう一度書いてある</td><td><code>よるのゆめ</code></td></tr>
+<tr><td>102〜</td><td>パネル・ボタン・盤など、部品ごとの見た目</td><td><code>立体パネル</code></td></tr>
+<tr><td>534〜</td><td>画面に置いてあるもの（HTML本体）</td><td><code>class="app"</code></td></tr>
+<tr><td>781</td><td><code>&lt;script&gt;</code> ここから動き</td><td><code>&lt;script&gt;</code></td></tr>
+<tr><td>784</td><td>オセロのルール　<span class="f">さわらない</span></td><td><code>1. オセロのルール</code></td></tr>
+<tr><td>833</td><td><b>収録の定石データ</b>　<span class="f">よく触る</span></td><td><code>const JOSEKI=</code></td></tr>
+<tr><td>900</td><td>定石の自己チェック（打てない手を見つける）</td><td><code>function checkJoseki</code></td></tr>
+<tr><td>916</td><td>保存データの決まり</td><td><code>3. 保存データ</code></td></tr>
+<tr><td>926</td><td>1曜日あたりに配る数</td><td><code>const per=</code></td></tr>
+<tr><td>—</td><td><b>けいとうの判定</b></td><td><code>function autoTag(</code></td></tr>
+<tr><td>—</td><td><b>定石ごとのモチの見た目</b>　<span class="f">よく触る</span></td><td><code>const FAMLOOK=</code></td></tr>
+<tr><td>—</td><td><b>モチの体の色（12色）</b></td><td><code>const HUES=</code></td></tr>
+<tr><td>—</td><td><b>モチの姿と出会う条件</b>　<span class="f">よく触る</span></td><td><code>const FORMS=</code></td></tr>
+<tr><td>995</td><td><b>モチを描くところ</b>（パーツと顔はここ）</td><td><code>function buildMochi</code></td></tr>
+<tr><td>1177</td><td>ホーム画面の中身</td><td><code>5. ホーム</code></td></tr>
+<tr><td>1239</td><td>出題のしくみ（再開・定石名の帯もここ）</td><td><code>6. 出題</code></td></tr>
+<tr><td>1433</td><td>画面の切りかえ</td><td><code>7. 画面の切りかえ</code></td></tr>
+<tr><td>1465</td><td>定石とうろく／せってい</td><td><code>8. 設定</code></td></tr>
+<tr><td>1664</td><td>新規定石（はりつけ・盤に打つ）</td><td><code>9. 新規定石</code></td></tr>
+<tr><td>1771</td><td>起動（いちばん最後に走る）</td><td><code>── 起動</code></td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note">
+<b>定石は、アプリの中からも足せます。</b>
+ファイルを直さなくても、<b>定石とうろく → ＋新規定石</b> から
+「棋譜をはりつけ」または「盤に打つ」で登録できます。
+下の <code>JOSEKI</code> を直すのは、<b>最初から全員に入っている定石</b>を増やしたいときです。
+</div>
+
+<h2 id="recipe">やりたいこと別</h2>
+
+<div class="recipe">
+  <div class="recipe-head"><h3>最初から入っている定石をふやす</h3><span class="where">const JOSEKI=</span></div>
+  <p>並んでいる1件はこの形です。<code>];</code> の前に1行足せば増えます。</p>
+<pre><code> {id:"rose-basic",  n:"ローズ定石・基本形",  lv:"基本形", cat:"ウサギ系",
+  s:"f5d6c5f4e3c6d3f6e6d7", note:"白の縦取りに黒c5から入る最頻出の形。"},</code></pre>
+  <dl>
+    <dt>id</dt><dd>他とかぶらない英数字。中身は何でもよく、画面には出ません</dd>
+    <dt>n</dt><dd>画面に出る名前</dd>
+    <dt>lv</dt><dd><code>"基本形"</code>（10手以下）か <code>"分岐"</code>（11手以上）。<b>中身の良し悪しとは関係ありません</b>。「えらぶ」画面で みじかい／ながい を切りかえるためだけに使っています。画面に札としては出しません</dd>
+    <dt>cat</dt><dd>むかしの分類のなごり。いまは使っていないので自由</dd>
+    <dt>s</dt><dd>手順。2文字ずつ、すきま無しで続けて書く。1手目は必ず <code>f5</code></dd>
+    <dt>note</dt><dd>「こたえを見る」で盤の下に出る説明</dd>
+  </dl>
+  <div class="note good">
+  <b>けいとう（うさぎ系・とら系…）は書かなくてよい</b>ものです。
+  手順のあたまを見て、アプリが自動でふり分けます。
+  白2手目が <code>f6</code> ならうし系、<code>f4</code> ならねずみ系、
+  <code>d6</code> なら黒3手目で <code>c5・c6</code>＝うさぎ系、
+  <code>c3</code>＝とら系、<code>c4</code>＝ねこ系です。
+  </div>
+  <div class="note good">
+  <b>打ちまちがえても大丈夫です。</b>
+  手順にオセロのルール上ありえない手が混じっていると、
+  ホーム画面のいちばん上に赤い帯で「この手は打てません」と、
+  <b>その定石名と何手目か</b>が出ます。出ていなければ手順は通っています。
+  </div>
+</div>
+
+<div class="recipe">
+  <div class="recipe-head"><h3>モチに出会う条件を変える</h3><span class="where">const FORMS=</span></div>
+  <p>モチは★のたまり具合ではなく、<b>その系統の定石を何本おぼえたか</b>で増えます。
+  そこを決めているのが <code>req</code> です。</p>
+<pre><code>  {n:"うさぎもち", req:{tag:"うさぎ", need:6},
+   w:116, h:88, parts:["rabbit"],
+   note:"兎定石のうさぎ。白の縦取りに黒c5をおぼえた姿。",
+   chara:"耳がいい。相手の打つ音でつぎの手を先に聞きとる。"},</code></pre>
+  <dl>
+    <dt>req:{tag:"うさぎ", need:6}</dt>
+    <dd>うさぎ系の定石を6本おぼえたら出会える。
+      <code>tag</code> に使えるのは
+      <code>うさぎ／とら／ねこ／うし／ねずみ／ローズ</code>。</dd>
+    <dt>req:{kinds:4}</dt>
+    <dd>上のような「系統のモチ」を4種るいそろえたら出会える。</dd>
+    <dt>req:null</dt><dd>さいしょからいる（こもち）。</dd>
+  </dl>
+  <p>「おぼえた」の中身は、<b>その定石で出題されるところを全部正解した</b>ことです。
+  演出を全部見たいときは <code>need</code> をぜんぶ <code>1</code> にすると
+  すぐ最後まで進みます。確認できたら元に戻してください。</p>
+  <div class="note warn">
+  <code>need</code> は、その系統に入っている定石の本数より多くしないでください。
+  たとえば ねずみ系は3本しか収録がないので、<code>need:6</code> にすると
+  一生出会えないモチになります。系統ごとの本数は、
+  アプリの「定石とうろく → ＋新規定石 → えらぶ」のけいとうボタンで見られます。
+  </div>
+</div>
+
+<div class="recipe">
+  <div class="recipe-head"><h3>モチの見た目を変える</h3><span class="where">FORMS / buildMochi</span></div>
+  <p>モチは画像ではなく、<b>その場で線を引いて描いています</b>。だから寸法もパーツも数字で変えられます。
+  変更は3段階あって、下にいくほど手間がかかります。</p>
+
+  <h4 style="margin:18px 0 0;font-family:'Zen Maru Gothic',sans-serif;font-size:15px">
+    ① 大きさ・ずんぐり具合を変える <span class="f">いちばん簡単</span></h4>
+  <p><code>FORMS</code> の <code>w</code> が横幅、<code>h</code> が高さです。</p>
+<pre><code>  {n:"うさぎもち", need:5,   w:116,h:88,  parts:["rabbit"],
+                        ↑横   ↑高さ    ↑つけるパーツ</code></pre>
+  <p><code>w</code> を大きく <code>h</code> を小さくすると、ずんぐりします。逆なら細長くなります。
+  数字はだいたい <b>w が 100〜150、h が 70〜115</b> の範囲に収めてください。</p>
+
+  <h4 style="margin:18px 0 0;font-family:'Zen Maru Gothic',sans-serif;font-size:15px">
+    ② パーツを入れ替える</h4>
+  <p><code>parts</code> に名前を並べると、その部品が生えます。用意してあるのは13種類です。</p>
+  <div class="scroll">
+  <table>
+  <thead><tr><th>名前</th><th>なにが出るか</th></tr></thead>
+  <tbody>
+  <tr><td>rabbit</td><td>長いうさぎ耳</td></tr>
+  <tr><td>mouse</td><td>丸いねずみ耳</td></tr>
+  <tr><td>tiger</td><td>三角のとら耳</td></tr>
+  <tr><td>cow</td><td>うしの角</td></tr>
+  <tr><td>tail</td><td>くるんとしたしっぽ</td></tr>
+  <tr><td>wings</td><td>小さな羽</td></tr>
+  <tr><td>crown</td><td>王冠</td></tr>
+  <tr><td>flower</td><td>花の冠</td></tr>
+  <tr><td>mikan</td><td>頭のみかん</td></tr>
+  <tr><td>stack</td><td>二段重ねの体になる</td></tr>
+  <tr><td>spots</td><td>体のぶち模様</td></tr>
+  <tr><td>stripes</td><td>体のしま模様</td></tr>
+  <tr><td>rainbow</td><td>体の虹しま</td></tr>
+  </tbody>
+  </table>
+  </div>
+  <p>組み合わせは自由です。<code>parts:["rabbit","crown","stripes"]</code> のようにすれば、
+  王冠をかぶったしま模様のうさぎもちになります。</p>
+
+  <h4 style="margin:18px 0 0;font-family:'Zen Maru Gothic',sans-serif;font-size:15px">
+    ③ 新しいパーツを作る</h4>
+  <p><code>buildMochi()</code> に、パーツ1つにつき <code>if</code> のかたまりが1つ書いてあります。
+  真似して足せば新しいパーツができます。ねこ耳を足す例です。</p>
+<pre><code>  if(P.includes("cat"))
+    [-1,1].forEach(sg=&gt;mk(g,"path",{
+      d:`M ${CX+sg*18} ${headTop+6} L ${CX+sg*30} ${headTop-22}
+         L ${CX+sg*42} ${headTop+4} Z`,
+      fill:skin, stroke:OL,"stroke-width":OW,"stroke-linejoin":"round"}));</code></pre>
+  <p>あとは <code>FORMS</code> のどれかに <code>parts:["cat"]</code> と書けば出ます。</p>
+  <div class="note">
+  <b>どこに書くかで前後が変わります。</b>
+  <code>buildMochi()</code> は上から順に描いていて、あとに書いたものが手前に来ます。
+  耳や角は <b>体を描く前</b>（<code>rabbit</code> や <code>tiger</code> が並んでいるあたり）に置くと
+  体の後ろに回り、生えているように見えます。頭の上にのせたいもの（王冠など）は体より後ろに書きます。
+  </div>
+  <div class="note">
+  <b>座標の読みかた。</b>モチは横200・縦226のマス目の上に描いています。
+  <code>CX</code>＝真ん中（100）、<code>BY</code>＝足もと（224）、<code>headTop</code>＝頭のてっぺん。
+  <b>y は下にいくほど大きい</b>ので、<code>headTop-22</code> は「頭より22ぶん上」という意味です。
+  <code>[-1,1].forEach(sg=&gt;...)</code> は左右2つぶんをまとめて描く書き方で、
+  <code>sg</code> が <code>-1</code> なら左、<code>1</code> なら右になります。
+  </div>
+  <div class="note good">
+  <b>用意してある部品。</b><code>skin</code>＝モチの地の色、<code>OL</code>＝縁の色、
+  <code>OW</code>＝縁の太さ。この3つを使っておけば、登場演出のシルエット（真っ白な影）にも
+  自動で正しく出ます。自分で色を直書きすると、影のときも色がついてしまいます。
+  </div>
+</div>
+
+<div class="recipe">
+  <div class="recipe-head"><h3>顔つきを変える</h3><span class="where">buildMochi の最後</span></div>
+  <p><code>buildMochi()</code> の最後、<code>if(sil) return;</code> より下が顔です。
+  <b>ここは全部の姿で共通</b>なので、直すと8体ぜんぶの顔が変わります。</p>
+<pre><code>  const fy=headTop+headH*0.40;        ← 顔の高さ。0.40 を小さくすると顔が上がる
+  mk(g,"ellipse",{cx:CX+sg*16, cy:fy, rx:5, ry:6.4, ...});   ← 目。rx/ry で大きさ
+  mk(g,"ellipse",{... rx:8, ry:5, fill:"#FF9FC8", opacity:.6});  ← ほっぺ
+  mk(g,"path",{d:`M ${CX-8} ${fy+13} Q ${CX} ${fy+20} ${CX+8} ${fy+13}`, ...});  ← 口</code></pre>
+  <p>口の <code>fy+20</code> を <code>fy+8</code> にすると、笑った口が真一文字に近づきます。
+  目の <code>ry</code> を大きくすると、たれ目っぽくなります。</p>
+</div>
+
+<div class="recipe">
+  <div class="recipe-head"><h3>定石ごとのモチの見た目を変える</h3><span class="where">const FAMLOOK=</span></div>
+  <p>モチには2種類あります。</p>
+  <dl>
+    <dt>けいとうのモチ</dt>
+    <dd>うさぎもち・とらもち など9体。<code>const FORMS=</code> に書いてあります。</dd>
+    <dt>定石のモチ</dt>
+    <dd>バナナもち・岩崎もち など。<b>収録されている定石から自動で作られます。</b>
+      名前の頭が同じ定石には、同じタグが自動でつきます。
+      <b>そのタグの定石を6本おぼえると出会えます。</b>
+      まだ6本ないタグは、いま持っているぶんを全部おぼえれば出会えます。
+      定石を足していけば、条件はひとりでに6本へ上がります。<br>
+      タグは「定石とうろく → 行をタップ」で付けかえられます。自作の定石を
+      「バナナ」のタグにすれば、バナナもちの本数にちゃんと入ります。<br>
+      <b>一度出会ったモチは、あとで条件が上がってもいなくなりません。</b></dd>
+  </dl>
+  <p>見た目だけは <code>FAMLOOK</code> で決めています。</p>
+<pre><code>"バナナ":  {parts:["banana"],           hue:4},
+"ヨット":  {parts:["boat"],             hue:11},
+"猫":      {parts:["cat","whisker"],    hue:7},</code></pre>
+  <dl>
+    <dt>parts</dt><dd>体につける部品。下の一覧から好きなだけ並べられます</dd>
+    <dt>hue</dt><dd>体の色の番号。<code>const HUES=</code> の並び順で 0〜11</dd>
+  </dl>
+  <p><b>使える部品</b>：
+  <code>rabbit</code> うさぎ耳／<code>cat</code> ねこ耳／<code>mouse</code> ねずみ耳／
+  <code>tiger</code> とら耳／<code>cow</code> つの／<code>buffalo</code> 太いつの／
+  <code>bat</code> こうもり耳／<code>tanuki</code> まるい耳／<code>sheep</code> もこもこ／
+  <code>bird</code> 羽／<code>fish</code> ひれ／<code>snake</code> ヘビ／
+  <code>boat</code> 帆／<code>rocket</code> ロケット／<code>tank</code> 砲身／
+  <code>banana</code>／<code>berry</code> いちご／<code>shell</code> 貝／<code>coin</code> 石／
+  <code>flower</code> 花／<code>crown</code> かんむり／<code>ribbon</code> リボン／
+  <code>wings</code> つばさ／<code>tail</code> しっぽ／<code>whisker</code> ひげ／
+  <code>mikan</code> みかん／<code>stack</code> 二段重ね／
+  もよう：<code>spots</code>／<code>stripes</code>／<code>dots</code>／<code>wave</code>／<code>rainbow</code></p>
+  <div class="note good">
+  <code>FAMLOOK</code> に書いていない家族も、名前から自動で見た目が決まります。
+  まず動かしてみて、気に入らない子だけ書き足すのがラクです。
+  </div>
+</div>
+
+<div class="recipe">
+  <div class="recipe-head"><h3>ホームに出すモチを増やす</h3><span class="where">const HOME_MAX=</span></div>
+  <p>モチずかんの各マス、左上のチェックを押すとホームに並びます。
+  同時に並べられる数は <code>HOME_MAX</code>（いまは4体）で決まっています。</p>
+<pre><code>const HOME_MAX=4;</code></pre>
+  <div class="note warn">
+  増やすと1体ずつが小さくなります。舞台の横幅は決まっていて、
+  体の数だけ横に並べるためです。6体くらいが限界だと思ってください。
+  </div>
+</div>
+
+<div class="recipe">
+  <div class="recipe-head"><h3>登場演出の速さを変える</h3><span class="where">playEvolution</span></div>
+  <p>グレーの影 →（色がもどる）→ 紙ふぶき、という順で動きます。
+  影でいる長さは <code>await sleep(950)</code> の数字です。</p>
+  <p>紙ふぶきの枚数は <code>makeBurst</code> の <code>i&lt;22</code>、
+  うしろで回る光は CSS の <code>.evo-rays</code> です。</p>
+</div>
+
+<div class="recipe">
+  <div class="recipe-head"><h3>モチの名前や紹介文を変える</h3><span class="where">const FORMS=</span></div>
+  <p><code>n</code> が姿の名前、<code>note</code> が出会ったときに下に出る一文、
+  <code>chara</code> がモチずかんで見られる性格の紹介です。</p>
+  <p>並び順は、そのままモチずかんの並び順になります。
+  出会う順番は人によって変わる（どの系統から勉強するかで決まる）ので、
+  行を入れ替えても壊れません。</p>
+</div>
+
+<div class="recipe">
+  <div class="recipe-head"><h3>色を変える</h3><span class="where">21行目 :root</span></div>
+  <p>色にはぜんぶ名前が付けてあり、下の部品はその名前だけを見ています。
+  つまり<b>ここを1か所変えると、その色を使っている場所が全部変わります</b>。</p>
+<pre><code>--outline:#4B3A80;    ← すべての縁取り。印象がいちばん変わる
+--mint:#7FE6C4;       ← 「くいずをとく」ボタン
+--pink:#FF9FC8;       ← ほっぺ、リセットボタン
+--gold:#FFD26B;       ← 選択中のタブ、経験値ゲージ</code></pre>
+  <div class="note warn">
+  夜の色は <b>42行目と54行目の2か所</b>に、同じ名前でもう一度書いてあります。
+  片方だけ直すと、片方のモードだけ色が変わります。
+  </div>
+</div>
+
+<div class="recipe">
+  <div class="recipe-head"><h3>ボタンや見出しの文字を変える</h3><span class="where">class="app" より下</span></div>
+  <p><code>&gt;</code> と <code>&lt;</code> にはさまれた日本語を書き換えるだけです。</p>
+<pre><code>&lt;button class="btn big" id="btnStart"&gt;くいずをとく&lt;/button&gt;
+                                     ここだけ変える</code></pre>
+  <p><code>class</code> や <code>id</code> は、見た目と動きをつなぐ名札です。ここは変えないでください。</p>
+</div>
+
+<div class="recipe">
+  <div class="recipe-head"><h3>1曜日あたりの定石の数を変える</h3><span class="where">const per=</span></div>
+<pre><code>  const per=2;   ← 各曜日に、初級から2つ・中級から2つ配る</code></pre>
+  <p>変えたあと「定石とうろく」の<b>おまかせで配る</b>を押すと配り直されます。
+  すでに自分で選んである場合は、そちらが優先されたままです。</p>
+</div>
+
+<h2 id="broke">壊したときは</h2>
+
+<p>真っ白な画面が出たら、それは文法のまちがいです。こわくありません。</p>
+
+<ol class="steps">
+  <li><b>F12 を押す</b>
+    ブラウザの開発ツールが開きます。<code>Console</code> タブを選んでください。</li>
+  <li><b>赤い行を読む</b>
+    <code>Uncaught SyntaxError: ...</code> のうしろに <code>index.html:842</code> のような
+    数字が出ます。<b>その行のあたり</b>がまちがっています。</li>
+  <li><b>その行と、そのすぐ上の行を見る</b>
+    たいてい原因は次の3つです。</li>
+</ol>
+
+<div class="scroll">
+<table>
+<thead><tr><th>よくある原因</th><th>見分けかた</th></tr></thead>
+<tbody>
+<tr><td>全角</td><td>日本語入力のまま <code>，</code> <code>”</code> <code>（</code> を打っている。
+  半角の <code>,</code> <code>"</code> <code>(</code> に直す</td></tr>
+<tr><td>閉じ忘れ</td><td><code>"</code> <code>}</code> <code>]</code> <code>)</code> のどれかが足りない。
+  VS Code はカーソルを括弧に合わせると対になる括弧を光らせます</td></tr>
+<tr><td>囲み忘れ</td><td>日本語は必ず <code>"</code> で囲みます。
+  <code>n:ローズ定石</code> ではなく <code>n:"ローズ定石"</code></td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note">
+<b>行の終わりのカンマ。</b>
+<code>{ }</code> を並べるときは、あいだに <code>,</code> が要ります。
+いちばん最後の <code>{ }</code> のうしろは、あってもなくても動きます。
+</div>
+
+<div class="note warn">
+<b>ブラウザの <code>confirm()</code> と <code>alert()</code> は使わないこと。</b>
+公開版は「サンドボックス」という制限つきの枠の中で動いていて、
+その中では <code>confirm()</code> は<b>ダイアログを出さないまま、黙って「いいえ」を返します</b>。
+エラーも出ないので、ボタンが何も反応しないように見えます。実際これで
+「登録から外す」「おまかせで配る」「きろくをリセット」の3つが動かなくなりました。
+いまは自前の <code>ask()</code> に置きかえてあるので、
+たしかめが要る場面ではそちらを使ってください。
+</div>
+
+<h2 id="safe">戻せるようにしておく</h2>
+
+<p>これがあるだけで、思いきって触れるようになります。</p>
+
+<ul class="plain">
+<li><b>いちばん簡単</b> — 触る前に <code>index.html</code> をコピーして、
+  同じフォルダに <code>index_backup.html</code> を作っておく。
+  だめだったら消して、名前を戻すだけ。</li>
+<li><b>ちゃんとやるなら</b> — GitHub Desktop でこのフォルダを管理すると、
+  変更した行が色分けで見え、いつでも「変更を破棄」で戻せます。
+  何をどう変えたかが残るので、あとから自分で読み返せるのが大きいです。</li>
+</ul>
+
+<h2 id="words">ちいさな用語辞典</h2>
+
+<dl>
+<dt>const なまえ = なかみ</dt>
+<dd>なかみに名前をつけて置いておく。以降はその名前で呼び出せます</dd>
+<dt>[ ... ]</dt>
+<dd>並び。<code>JOSEKI</code> は定石を18個ならべた「並び」です</dd>
+<dt>{ なまえ: なかみ, ... }</dt>
+<dd>ひとかたまり。定石1件が「名前・レベル・手順…」のかたまりになっています</dd>
+<dt>function なまえ( ) { ... }</dt>
+<dd>一連の手順に名前をつけたもの。名前を書けば中身がまとめて動きます</dd>
+<dt>// と /* */</dt>
+<dd>メモ。<code>//</code> はその行の終わりまで、<code>/*</code> から <code>*/</code> まではその範囲が、
+  動きに関係しない覚え書きになります。ファイル中の日本語のコメントはこれです</dd>
+<dt>--なまえ</dt>
+<dd>CSS側で色などにつけた名前。<code>var(--mint)</code> と書くと、その色が呼び出されます</dd>
+</dl>
+
+<div class="note good" style="margin-top:34px">
+<b>まずは1つだけ変えて、保存して、更新する。</b>
+これを何回か繰り返すと、どこが何に効くのかが手で分かってきます。
+いっぺんに何か所も変えると、うまくいかなかったときに原因が分からなくなります。
+</div>
+
+</div>
