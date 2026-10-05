@@ -639,6 +639,11 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
 #mvPick.folded{padding-bottom:8px}
 .mv-list .chk.now{background:linear-gradient(#FFE7A6,var(--gold));
   box-shadow:0 3px 0 var(--gold-dk)}
+/* ムービーだけに足した手順。消すボタンを右はしに出す */
+.mv-list .chk.mine{background:linear-gradient(#FFEFF7,#FFD9EA)}
+.mv-del{flex-shrink:0;font:inherit;font-size:14px;line-height:1;cursor:pointer;
+  background:none;border:0;color:var(--outline);opacity:.6;padding:4px 2px 4px 8px}
+.mv-del:active{opacity:1}
 #s-movie.on{gap:7px;padding:8px 10px 6px}
 /* 一覧をたたんだときの、盤以外の合計が約395px。盤はその残り */
 #s-movie .boardframe{width:min(100%, max(230px, calc(100svh - 395px)))}
@@ -992,7 +997,7 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
     </div>
 
     <div class="panel field" id="f5maker">
-      <div class="ribbon out sm">F5始点メーカー</div>
+      <div class="ribbon out sm" id="f5MakerTitle">F5始点メーカー</div>
 
       <svg class="factory" viewBox="0 0 260 120" aria-hidden="true">
         <!-- けむり -->
@@ -1016,7 +1021,7 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
         <circle class="pop" cx="238" cy="52" r="10" fill="#FFF" stroke="#4B3A80" stroke-width="4"/>
       </svg>
 
-      <div class="hint">初手が f5 でない棋譜を入れると、盤を回して <b>f5始点に直したもの</b>が出てきます。
+      <div class="hint"><span id="f5MakerHint">初手が f5 でない棋譜を入れると、盤を回して <b>f5始点に直したもの</b>が出てきます。</span>
         盤の向きが変わるだけなので、手順の中身も強さも変わりません。</div>
       <textarea class="tin ta" id="f5In" rows="3" placeholder="d3c5f6f3c4..."></textarea>
       <div class="rowbar">
@@ -1063,6 +1068,21 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
       <div class="tagbar" id="mvTag"></div>
       <div class="hint" id="mvCount"></div>
       <div class="checks mv-list" id="mvList"></div>
+      <button class="btn sm lilac" id="mvAddOpen">＋ ムービーに足す</button>
+    </div>
+
+    <div class="panel field" id="mvAdd" hidden>
+      <div class="ribbon out sm">ムービーに足す</div>
+      <div class="hint">ここで足した手順は<b>ムービーでだけ見られます</b>。
+        クイズには出ませんし、モチやタグの本数にも入りません。</div>
+      <input class="tin" id="mvName" type="text" placeholder="なまえ（例：きのうの対局）">
+      <textarea class="tin ta" id="mvKifu" rows="3"></textarea>
+      <div class="rowbar">
+        <button class="btn sm pink" id="mvPasteBtn">ペースト</button>
+        <button class="btn sm" id="mvAddGo">たしかめて足す</button>
+      </div>
+      <button class="btn sm lilac" id="mvAddClose">とじる</button>
+      <div class="result" id="mvAddResult" hidden></div>
     </div>
 
     <div class="turnpill" id="mvTurn"><span class="d b"></span>定石をえらんでください</div>
@@ -1094,6 +1114,18 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
         <svg viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></svg>
       </button>
       <div class="out sm qtitle">せってい</div>
+    </div>
+
+    <div class="panel field">
+      <div class="ribbon out sm">はじめの手</div>
+      <div class="seg" id="segOrigin">
+        <button data-v="f5">f5 からはじめる</button>
+        <button data-v="e6">e6 からはじめる</button>
+      </div>
+      <div class="hint">f5始点と e6始点は、盤を斜めに折り返した鏡どうしです。
+        ここを変えると、<b>盤も棋譜も、選んだほうの向きで出ます</b>。
+        収録している196本はそのまま使えます。<br>
+        いまの表示：<b id="originNow">f5</b> 始点　（例：<span id="originSample"></span>）</div>
     </div>
 
     <div class="panel field">
@@ -1279,6 +1311,24 @@ function hasMove(b,p){
   return false;
 }
 const toRC = m => [parseInt(m[1],10)-1, m.charCodeAt(0)-97];   // "f5" → [4,5]
+
+/* ── はじめの手（f5／e6）────────────────────────────────────
+   f5始点と e6始点は、盤を左上から右下への対角線で折り返した鏡像どうし。
+   初期配置（d4e5が白、e4d5が黒）はこの折り返しで変わらないので、
+   f5の定石をそのまま折り返せば、e6の定石になる。
+   なので中のデータは f5 のまま持ち、画面に出すときと、人が入れたときだけ
+   ここで折り返す。収録した196本に手を入れる必要はない。           */
+let ORIGIN="f5";                                  // 起動時に保存から読みなおす
+const flipped = () => ORIGIN==="e6";
+/** 行と列を入れかえる。折り返しは2回かけると元に戻る（自分が逆の操作） */
+const fRC = (r,c) => flipped() ? [c,r] : [r,c];
+/** "f5" ⇄ "e6" のように、1手ぶんを折り返す */
+const fSq = m => { if(!flipped()) return m; const [r,c]=toRC(m); return toSq(c,r); };
+/** 棋譜ぜんたいを折り返す */
+const fKifu = s => (String(s||"").match(/../g)||[]).map(fSq).join("");
+/** 画面に出す「はじめの手」。説明文やお手本の棋譜に使う */
+const originSq = () => ORIGIN;
+const originSample = () => fKifu("f5d6c5f4e3c6d3f6e6d7");
 const toSq = (r,c) => String.fromCharCode(97+c)+(r+1);
 
 /** 手順を最初から再生して、各手の盤面と手番を作っておく */
@@ -1745,6 +1795,16 @@ for(const j of JOSEKI) prep(j);
 
 // LIB ＝ 収録定石 ＋ 自分で登録した定石。画面はいつもこちらを見る
 let LIB=[], byId={};
+/* ムービーだけに足した手順。クイズにも、モチやタグの本数にも入れない。
+   LIB とは別に持ち、ムービーの一覧でだけ合流させる。                  */
+let MOVIES=[];
+function rebuildMovies(){
+  MOVIES=(S.movies||[]).map(m=>prep(Object.assign({}, m,
+    {lv:"じぶん", cat:"じぶん", movieOnly:true})));
+}
+/** ムービーで選べるもの＝収録＋自作の定石＋ムービー専用 */
+const movieList = () => [...LIB, ...MOVIES];
+const movieById = id => byId[id] || MOVIES.find(m=>m.id===id);
 /* おぼえた本数の控え。save() より先に使われることがあるので、ここで用意しておく */
 let TALLY=null;
 function clearTally(){ TALLY=null; }
@@ -1827,6 +1887,9 @@ if(!S.dperfect) S.dperfect={};        // きょうパーフェクトを出した
 if(!S.att)     S.att={};              // 解いている途中の成績（定石ごと）
 if(!S.fam)     S.fam={};              // 自分で付けかえたタグ（バナナ・岩崎…）
 if(!S.kifu)    S.kifu={};             // 自分で直した手順（収録定石ぶん）
+if(!Array.isArray(S.movies)) S.movies=[];   // ムービーでだけ見る手順
+if(S.origin!=="e6") S.origin="f5";    // はじめの手。f5 か e6
+ORIGIN=S.origin;
 delete S.tag;  // けいとう（うさぎ・とら…）は手順から決まるので、付けかえは廃止
 if(!S.pos)     S.pos={};
 delete S.cleared;                   // 「その日は出さない」仕様は取りやめ
@@ -1843,6 +1906,7 @@ delete S.startMode; delete S.startMove;
 if(S.level==="初級") S.level="基本形";
 if(S.level==="中級") S.level="分岐";
 rebuildLib();
+rebuildMovies();
 function save(){
   clearTally();                       // 記録が変わったので、数え直す
   try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){}
@@ -2597,7 +2661,8 @@ function renderCollection(){
                                   : `ホームに出せるのは ${HOME_MAX}体までです`);
           return;
         }
-        renderCollection(); renderHome(false);
+        renderCollection(); refreshPlaceholders();
+renderHome(false);
         return;
       }
       openMochiInfo(i);
@@ -2710,7 +2775,7 @@ function origKifu(id){
   const c=(S.custom||[]).find(x=>x.id===id); return c ? c.s : "";
 }
 /** 棋譜を読みやすく、2文字ずつ離した形にする */
-const spaceKifu = s => (s||"").match(/../g) ? s.match(/../g).join(" ") : "";
+const spaceKifu = s => (s||"").match(/../g) ? s.match(/../g).map(fSq).join(" ") : "";
 /** その定石で「どちらの番を答えるか」。both / black / white */
 function sideOf(j){ return (S.side||{})[j.id]||"both"; }
 
@@ -2849,21 +2914,30 @@ function buildBoardDom(filesId, ranksId, boardId, onClick){
     e.textContent=r+1; ranks.appendChild(e); }
   for(let r=0;r<8;r++) for(let c=0;c<8;c++){
     const b=document.createElement("button");
+    // r,c は画面の位置。中のデータは折り返した側なので、ここで直して渡す
     b.className="cell"; b.dataset.r=r; b.dataset.c=c;
-    b.setAttribute("aria-label",toSq(r,c));
+    b.setAttribute("aria-label",toSq(r,c));   // 盤ごと折り返すので、名前は動かない
     b.innerHTML='<span class="st"></span>';
-    b.addEventListener("click",()=>onClick(r,c));
+    b.addEventListener("click",()=>onClick(...fRC(r,c)));
     board.appendChild(b);
   }
 }
 const cellIn=(id,r,c)=>document.getElementById(id).children[r*8+c];
-const cellAt=(r,c)=>cellIn("board",r,c);
+/** データの位置をもらって、画面のマスを返す */
+const cellAt=(r,c)=>{ const [dr,dc]=fRC(r,c); return cellIn("board",dr,dc); };
 
 /**
  * 盤面を描く。
  * @param legalFor 手番の色を渡すと、そこに打てるマスへ薄い丸を出す（新規登録の盤で使う）
  */
 function paintIn(id,board,lastMove,legalFor,onlyAt){
+  // e6始点のときは、盤ぜんたいを折り返してから描く。
+  // 折り返した盤もオセロとして正しい（対称なので）ため、打てる場所の計算もそのまま使える
+  if(flipped()){
+    board=board[0].map((_,r)=>board.map(row=>row[r]));
+    lastMove=lastMove?fSq(lastMove):lastMove;
+    onlyAt=onlyAt?fSq(onlyAt):onlyAt;
+  }
   for(let r=0;r<8;r++) for(let c=0;c<8;c++){
     const cell=cellIn(id,r,c), st=cell.firstElementChild;
     cell.className="cell";
@@ -2871,7 +2945,7 @@ function paintIn(id,board,lastMove,legalFor,onlyAt){
     st.className = v ? `st on ${v===1?"b":"w"}` : "st";
     cell.querySelectorAll(".mk,.hint-dot").forEach(e=>e.remove());
     if(legalFor && !v && flips(board,r,c,legalFor).length
-       && (!onlyAt || onlyAt===toSq(r,c))){
+       && (!onlyAt || onlyAt===toSq(r,c))){   // ここは折り返したあとの座標どうし
       const d=document.createElement("span"); d.className="hint-dot"; cell.appendChild(d);
     }
   }
@@ -2923,12 +2997,12 @@ function showQ(){
 
 function answer(r,c){
   if(Q.answered||Q.revealed) return;
-  const q=Q.list[Q.i], j=byId[q.jid], stt=j.states[q.k], sq=toSq(r,c);
+  const q=Q.list[Q.i], j=byId[q.jid], stt=j.states[q.k], sq=toSq(r,c), dsq=fSq(sq);
 
   if(!flips(stt.board,r,c,stt.player).length){
     const cell=cellAt(r,c); cell.classList.add("ng");
     setTimeout(()=>cell.classList.remove("ng"),330);
-    msg(`${sq} は打てない`,"石を1枚も裏返せない場所だよ","ng"); return;
+    msg(`${dsq} は打てない`,"石を1枚も裏返せない場所だよ","ng"); return;
   }
   if(sq!==j.moves[q.k]){
     Q.wrong++;
@@ -2940,8 +3014,8 @@ function answer(r,c){
     setTimeout(()=>cell.classList.remove("ng"),330);
     // 1手目だけは専用の文言にする
     const first = q.k===0 && j.moves[0]==="f5";
-    msg(`${sq} じゃないよ`,
-        first ? "f5以外は邪道だよ！" : "打てる手だけど、定石手は別のところ", "ng");
+    msg(`${dsq} じゃないよ`,
+        first ? `${originSq()}以外は邪道だよ！` : "打てる手だけど、定石手は別のところ", "ng");
     return;
   }
 
@@ -2955,7 +3029,7 @@ function answer(r,c){
   setTimeout(()=>paint(j.states[q.k+1].board, j.moves[q.k]),80);
 
   const rest=(S.run && S.run.jid===j.id) ? (S.run.all - S.run.done) : 0;
-  msg(`せいかい！　${sq}`, rest>0 ? `のこり ${rest}手` : "この定石はこれで最後！", "ok");
+  msg(`せいかい！　${dsq}`, rest>0 ? `のこり ${rest}手` : "この定石はこれで最後！", "ok");
 
   document.getElementById("btnReveal").style.display="none";
   document.getElementById("btnNext").style.display="";
@@ -2979,9 +3053,9 @@ function reveal(){
     el.className="mk"+(j.states[k].player===2?" w":"");
     el.textContent=k+1;
     cellAt(r,c).appendChild(el);
-    rest.push(`<em>${k+1}</em>${m}`);
+    rest.push(`<em>${k+1}</em>${fSq(m)}`);
   }
-  msg(`${j.moves[q.k]} が定石手`, j.note+`<div class="seq">${rest.join("　")}</div>`);
+  msg(`${fSq(j.moves[q.k])} が定石手`, j.note+`<div class="seq">${rest.join("　")}</div>`);
   document.getElementById("btnReveal").style.display="none";
   document.getElementById("btnNext").style.display="";
 }
@@ -3135,6 +3209,10 @@ function mergeBackup(d){
   S.solved =M(S.solved , d.solved);
   S.perfect=M(S.perfect, d.perfect);
   S.dsolved=M(S.dsolved, d.dsolved);
+  // ムービー専用の手順も、手順が同じものは二重に足さない
+  if(!Array.isArray(S.movies)) S.movies=[];
+  const mhave=new Set(S.movies.map(m=>m.s));
+  for(const m of (d.movies||[])) if(!mhave.has(m.s)){ mhave.add(m.s); S.movies.push(m); }
   S.dperfect=M(S.dperfect, d.dperfect);
   S.rename =M(S.rename , d.rename);
   S.startAt=M(S.startAt, d.startAt);
@@ -3193,6 +3271,7 @@ document.getElementById("btnBkIn").addEventListener("click",async ()=>{
    そのまま描くだけなので、計算はいらない。                          */
 const MV={jid:null, k:0, timer:null, speed:800, tag:"すべて"};
 
+
 /** 一覧を描く。けいとうでしぼりこめる */
 function mvRenderList(){
   const bar=document.getElementById("mvTag"); bar.innerHTML="";
@@ -3205,17 +3284,32 @@ function mvRenderList(){
   }
   const box=document.getElementById("mvList"); box.innerHTML="";
   let cnt=0;
-  for(const j of LIB){
+  for(const j of movieList()){
     if(MV.tag!=="すべて" && tagOf(j)!==MV.tag) continue;
     cnt++;
     const b=document.createElement("button");
-    b.className="chk"+(j.id===MV.jid?" now":"");
-    b.innerHTML=`${tagChip(j)}<span class="nm">${j.n}</span>`
-               +`<span class="mv">${j.moves.length}手</span>`;
-    b.addEventListener("click",()=>mvLoad(j.id));
+    b.className="chk"+(j.id===MV.jid?" now":"")+(j.movieOnly?" mine":"");
+    b.innerHTML=(j.movieOnly ? `<span class="tgchip hoka">ムービー</span>` : tagChip(j))
+               +`<span class="nm">${j.n}</span>`
+               +`<span class="mv">${j.moves.length}手</span>`
+               +(j.movieOnly ? `<button class="mv-del" aria-label="けす">✕</button>` : "");
+    b.addEventListener("click",async e=>{
+      if(e.target.classList.contains("mv-del")){
+        e.stopPropagation();
+        const ok=await ask("この手順をけしますか",
+          `<b>${j.n}</b> をムービーから消します。もとに戻せません。`, "けす", true);
+        if(!ok) return;
+        S.movies=(S.movies||[]).filter(m=>m.id!==j.id);
+        if(MV.jid===j.id){ MV.jid=null; MV.k=0; }
+        save(); rebuildMovies(); mvRenderList(); mvRender();
+        return;
+      }
+      mvLoad(j.id);
+    });
     box.appendChild(b);
   }
-  document.getElementById("mvCount").textContent=`${cnt}本`;
+  document.getElementById("mvCount").textContent=
+    `${cnt}本`+((S.movies||[]).length ? `（うちムービー専用 ${(S.movies||[]).length}本）` : "");
 }
 
 /** 速さのボタンの見た目をそろえる */
@@ -3226,7 +3320,9 @@ function mvRenderSpeed(){
 
 /** いまの局面を盤に描き、手順と手番を出す */
 function mvRender(){
-  const j=byId[MV.jid];
+  // まだムービーの盤を作っていないときは、描くものがない
+  if(!document.getElementById("mvBoard").children.length) return;
+  const j=movieById(MV.jid);
   if(!j){
     paintIn("mvBoard", startBoard(), null);
     document.getElementById("mvTurn").innerHTML="定石をえらんでください";
@@ -3243,7 +3339,7 @@ function mvRender(){
       +`${st.player===1?"くろ":"しろ"}の番　${k+1}手目`;
 
   const seq=j.moves.map((m,i)=>
-    `<i class="${i<k?"done":""}${i===k-1?" now":""}">${i+1}${m}</i>`).join("");
+    `<i class="${i<k?"done":""}${i===k-1?" now":""}">${i+1}${fSq(m)}</i>`).join("");
   document.getElementById("mvMsg").innerHTML=
     `<div class="mv-seq">${seq}</div>`
     + (last && j.note ? `<div class="s">${j.note}</div>` : "");
@@ -3254,6 +3350,7 @@ function mvStop(){ if(MV.timer){ clearInterval(MV.timer); MV.timer=null; } }
 
 function mvLoad(jid){
   mvStop(); MV.jid=jid; MV.k=0;
+  document.getElementById("mvAdd").hidden=true;
   mvFold(true);                     // えらんだら一覧はたたむ
   mvRenderList(); mvRender();
   window.scrollTo(0,0);
@@ -3263,19 +3360,19 @@ function mvLoad(jid){
 function mvFold(fold){
   const pick=document.getElementById("mvPick");
   pick.classList.toggle("folded", fold);
-  const j=byId[MV.jid];
+  const j=movieById(MV.jid);
   document.getElementById("mvPickToggle").textContent =
     fold && j ? `${j.n} ▼` : "どの定石を見る？";
 }
 
 function mvStep(d){
-  const j=byId[MV.jid]; if(!j) return;
+  const j=movieById(MV.jid); if(!j) return;
   MV.k=Math.max(0, Math.min(MV.k+d, j.moves.length));
   mvRender();
 }
 
 function mvPlayPause(){
-  const j=byId[MV.jid];
+  const j=movieById(MV.jid);
   if(!j){ mvRender(); return; }
   if(MV.timer){ mvStop(); mvRender(); return; }
   if(MV.k>=j.moves.length) MV.k=0;          // 終わっていたら頭から
@@ -3285,6 +3382,37 @@ function mvPlayPause(){
   }, MV.speed);
   mvRender();
 }
+
+/* ── ムービーに足す ── */
+document.getElementById("mvAddOpen").addEventListener("click",()=>{
+  const box=document.getElementById("mvAdd");
+  box.hidden=!box.hidden;
+  if(!box.hidden){
+    document.getElementById("mvKifu").placeholder=spaceKifu("f5d6c5f4e3c6d3f6e6d7");
+    box.scrollIntoView({block:"nearest"});
+  }
+});
+document.getElementById("mvAddClose").addEventListener("click",()=>{
+  document.getElementById("mvAdd").hidden=true;
+});
+document.getElementById("mvPasteBtn").addEventListener("click",()=>{
+  pasteInto(document.getElementById("mvKifu"), "mvAddResult");
+});
+document.getElementById("mvAddGo").addEventListener("click",()=>{
+  const moves=parseKifu(document.getElementById("mvKifu").value);
+  const v=validateMoves(moves);
+  if(!v.ok){ showResult("mvAddResult", false, `✕ ${v.msg}`); return; }
+  const nm=(document.getElementById("mvName").value||"").trim() || "なまえのない手順";
+  const id="mv"+Date.now().toString(36);
+  if(!Array.isArray(S.movies)) S.movies=[];
+  S.movies.push({id, n:nm, s:moves.join("")});
+  save(); rebuildMovies();
+  document.getElementById("mvName").value="";
+  document.getElementById("mvKifu").value="";
+  document.getElementById("mvAddResult").hidden=true;
+  document.getElementById("mvAdd").hidden=true;
+  mvLoad(id);
+});
 
 document.getElementById("btnToMovie").addEventListener("click",()=>{
   go("movie");
@@ -3463,7 +3591,7 @@ function renderJEdit(){
   const typed=parseKifu(document.getElementById("jeKifu").value);
   const v=validateMoves(typed);
   const kifuNG = !v.ok ? v.msg
-               : typed[0]!=="f5" ? "1手目は f5 だけです。"
+               : typed[0]!=="f5" ? `1手目は ${originSq()} だけです。`
                : null;
   const moves = kifuNG ? j.moves : typed;
 
@@ -3553,7 +3681,45 @@ async function removeSelected(){
 }
 
 /** せってい画面：アプリの動きかたと、記録 */
+/** はじめの手の画面を描く */
+function renderOrigin(){
+  for(const b of document.querySelectorAll("#segOrigin button"))
+    b.setAttribute("aria-pressed", b.dataset.v===ORIGIN);
+  const now=document.getElementById("originNow");
+  if(now) now.textContent=ORIGIN;
+  const sm=document.getElementById("originSample");
+  if(sm) sm.textContent=spaceKifu("f5d6c5f4e3c6d3f6e6d7");
+}
+
+for(const b of document.querySelectorAll("#segOrigin button"))
+  b.addEventListener("click",()=>{
+    if(ORIGIN===b.dataset.v) return;
+    ORIGIN=b.dataset.v; S.origin=ORIGIN; save();
+    // 盤も棋譜も向きが変わるので、開いている画面を描きなおす
+    renderOrigin(); renderSet(); renderHome(false);
+    if(typeof mvRender==="function") mvRender();
+    refreshPlaceholders();
+  });
+
+/** 入力欄のお手本と説明に出る棋譜を、いまの向きにそろえる */
+function refreshPlaceholders(){
+  const ex=spaceKifu("f5d6c5f4e3c6d3f6e6d7").replace(/ /g,"");
+  const pt=document.getElementById("pasteText");
+  if(pt) pt.placeholder=ex;
+  // メーカーの例は「いまの始点ではないほう」を出すのが分かりやすい
+  const f5i=document.getElementById("f5In");
+  if(f5i) f5i.placeholder=(ORIGIN==="f5" ? "e6f4e3d6c5" : "f5d6c5f4e3")+"...";
+  const mk=document.getElementById("f5MakerTitle");
+  if(mk) mk.textContent=`${ORIGIN.toUpperCase()}始点メーカー`;
+  const mh=document.getElementById("f5MakerHint");
+  if(mh) mh.innerHTML=`初手が ${ORIGIN} でない棋譜を入れると、盤を回して `
+    +`<b>${ORIGIN}始点に直したもの</b>が出てきます。`;
+  const jk=document.getElementById("jeKifu");
+  if(jk) jk.placeholder=spaceKifu("f5d6c3d3c4f4");
+}
+
 function renderSet(){
+  renderOrigin();
   document.getElementById("resetHint").textContent=
     `のべ正解 ${S.total}問 ／ いまの姿 ${MOCHI[curForm()].n}`;
 }
@@ -3623,7 +3789,7 @@ document.getElementById("btnPasteCheck").addEventListener("click",()=>{
   const tg=autoTag(moves.join(""));
   showResult("pasteResult",true,
     `○ ${moves.length}手を読みとりました　けいとうは <b>${tg}${tg==="そのほか"?"":"系"}</b><br>
-     <span class="mono">${moves.join(" ")}</span>
+     <span class="mono">${moves.map(fSq).join(" ")}</span>
      <button class="btn sm" id="btnPasteSave">この手順でとうろく</button>`);
   document.getElementById("btnPasteSave").addEventListener("click",()=>{
     addCustom(document.getElementById("pasteName").value.trim(), moves);
@@ -3642,9 +3808,11 @@ document.getElementById("btnF5Go").addEventListener("click",()=>{
   if(!conv.ok){ showResult("f5Result",false,`✕ ${conv.msg}`); return; }
   const v=validateMoves(conv.moves);
   if(!v.ok){ showResult("f5Result",false,`✕ ${v.msg}<br>元の棋譜そのものが正しくないようです。`); return; }
-  const kifu=conv.moves.join("");
+  // 中は f5 で持つが、画面には選んだ始点の向きで出す
+  const kifu=fKifu(conv.moves.join(""));
   showResult("f5Result",true,
-    (conv.already ? "○ もともと f5 始点でした" : `○ ${conv.how} と f5 始点になりました`)
+    (conv.already ? `○ もともと ${originSq()} 始点でした`
+                  : `○ ${conv.how} と ${originSq()} 始点になりました`)
     + `<div class="kifuout">${kifu}</div>`
     + `<button class="btn sm lilac" id="btnF5Copy">コピーする</button>`
     + `<button class="btn sm" id="btnF5Save" style="margin-top:7px">この手順でとうろく</button>`);
@@ -3692,6 +3860,7 @@ document.getElementById("btnReset").addEventListener("click",async ()=>{
   S.total=0; S.today=0; S.streak=0;
   S.lastDay=""; S.lastLoginDay=""; S.run=null; S.pos={};
   S.seenForms=["k:こもち"]; S.form="k:こもち"; S.forms=["k:こもち"];  // モチもこもちだけに戻す
+  // ムービーに足した手順は、自分で入れたものなので消さない
   save(); renderSet(); renderHome(true);
 });
 
@@ -3722,8 +3891,10 @@ function toF5(moves){
 }
 
 /** 貼りつけた文字から手順だけを拾う。大文字・空白・URL混じりでも動く */
+/** 人が入れた文字から手順をとりだす。e6始点のときは、ここで f5 側に折り返す */
 function parseKifu(text){
-  return (String(text||"").toLowerCase().match(/[a-h][1-8]/g)) || [];
+  const raw=(String(text||"").toLowerCase().match(/[a-h][1-8]/g)) || [];
+  return flipped() ? raw.map(fSq) : raw;
 }
 
 /** 手順がオセロのルールとして成り立つか確かめる */
@@ -3734,7 +3905,7 @@ function validateMoves(moves){
   for(let i=0;i<moves.length;i++){
     if(!hasMove(b,p)) p=3-p;
     const [r,c]=toRC(moves[i]), f=flips(b,r,c,p);
-    if(!f.length) return {ok:false, msg:`${i+1}手目の ${moves[i]} は打てません。`};
+    if(!f.length) return {ok:false, msg:`${i+1}手目の ${fSq(moves[i])} は打てません。`};
     b[r][c]=p; for(const [rr,cc] of f) b[rr][cc]=p;
     p=3-p;
   }
