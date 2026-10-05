@@ -1,2 +1,6 @@
 # Local Netlify folder
 .netlify
+
+# 飾りの作業用フォルダ。原本（原寸）は公開しない。
+# アプリが使うのは index.html に埋めた縮小版だけ。
+deco/
