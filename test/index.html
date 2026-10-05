@@ -1318,12 +1318,52 @@ const toRC = m => [parseInt(m[1],10)-1, m.charCodeAt(0)-97];   // "f5" → [4,5]
    f5の定石をそのまま折り返せば、e6の定石になる。
    なので中のデータは f5 のまま持ち、画面に出すときと、人が入れたときだけ
    ここで折り返す。収録した196本に手を入れる必要はない。           */
-let ORIGIN="f5";                                  // 起動時に保存から読みなおす
-const flipped = () => ORIGIN==="e6";
-/** 行と列を入れかえる。折り返しは2回かけると元に戻る（自分が逆の操作） */
-const fRC = (r,c) => flipped() ? [c,r] : [r,c];
+/* 最初の4つの石の置き方を変えない、盤の折り返しは4とおり。
+   どれも2回かけると元に戻るので、画面→データ と データ→画面 で同じ式が使える。 */
+const SYMS=[
+  {n:"そのまま",   t:(r,c)=>[r,c]},
+  {n:"180度",      t:(r,c)=>[7-r,7-c]},
+  {n:"ななめ",     t:(r,c)=>[c,r]},
+  {n:"逆ななめ",   t:(r,c)=>[7-c,7-r]},
+];
+/* 2つ続けてかけるとどれになるか（ななめ×逆ななめ＝180度、など） */
+const SYMMUL=[[0,1,2,3],[1,0,3,2],[2,3,0,1],[3,2,1,0]];
+
+let ORIGIN="f5";        // 起動時に保存から読みなおす
+let RUNSYM=0;           // 出題中、本人が選んだ向き（d6 ではなく f4 を打った、など）
+/** いま画面に出すときの折り返し＝はじめの手の設定 ＋ 出題中に選ばれた向き */
+const curSym = () => SYMMUL[ORIGIN==="e6" ? 2 : 0][RUNSYM];
+const flipped = () => curSym()!==0;
+/** 行と列を折り返す。折り返しは2回かけると元に戻る（自分が逆の操作） */
+const fRC = (r,c) => SYMS[curSym()].t(r,c);
 /** "f5" ⇄ "e6" のように、1手ぶんを折り返す */
-const fSq = m => { if(!flipped()) return m; const [r,c]=toRC(m); return toSq(c,r); };
+const fSq = m => { if(!flipped()) return m;
+                   const [r,c]=toRC(m), [nr,nc]=fRC(r,c); return toSq(nr,nc); };
+
+/** その折り返しをかけても盤の形が変わらないか */
+function sameUnder(board, i){
+  const t=SYMS[i].t;
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+    const [nr,nc]=t(r,c);
+    if(board[nr][nc]!==board[r][c]) return false;
+  }
+  return true;
+}
+/**
+ * 定石手 want と、打たれた手 got が「向きが違うだけ」かを調べる。
+ * 盤の形が変わらない折り返しで重なるなら、それは同じ手。
+ * 斜め取り（f5f6e6）の局面がちょうどこれで、d6 と f4 が重なる。
+ * @return 重なる折り返しの番号。重ならなければ -1
+ */
+function sameMoveUnderSym(board, want, got){
+  const [wr,wc]=toRC(want);
+  for(let i=1;i<SYMS.length;i++){
+    if(!sameUnder(board,i)) continue;
+    const [nr,nc]=SYMS[i].t(wr,wc);
+    if(toSq(nr,nc)===got) return i;
+  }
+  return -1;
+}
 /** 棋譜ぜんたいを折り返す */
 const fKifu = s => (String(s||"").match(/../g)||[]).map(fSq).join("");
 /** 画面に出す「はじめの手」。説明文やお手本の棋譜に使う */
@@ -2934,7 +2974,9 @@ function paintIn(id,board,lastMove,legalFor,onlyAt){
   // e6始点のときは、盤ぜんたいを折り返してから描く。
   // 折り返した盤もオセロとして正しい（対称なので）ため、打てる場所の計算もそのまま使える
   if(flipped()){
-    board=board[0].map((_,r)=>board.map(row=>row[r]));
+    const t=SYMS[curSym()].t, out=Array.from({length:8},()=>Array(8).fill(0));
+    for(let r=0;r<8;r++) for(let c=0;c<8;c++){ const [nr,nc]=t(r,c); out[nr][nc]=board[r][c]; }
+    board=out;
     lastMove=lastMove?fSq(lastMove):lastMove;
     onlyAt=onlyAt?fSq(onlyAt):onlyAt;
   }
@@ -2977,6 +3019,7 @@ function showQ(){
   (S.pos||(S.pos={}))[q.jid]=q.k;      // この定石は次ここから、と覚えておく
   // 定石が変わったら、その定石の成績を数えなおす
   if(!S.run || S.run.jid!==q.jid){
+    RUNSYM=0;                       // 別の定石に移ったら、向きは選びなおし
     const all=Q.list.filter(x=>x.jid===q.jid).length;
     const done=Q.list.filter(x=>x.jid===q.jid && x.k<q.k).length;
     if(!S.att) S.att={};
@@ -3005,18 +3048,26 @@ function answer(r,c){
     msg(`${dsq} は打てない`,"石を1枚も裏返せない場所だよ","ng"); return;
   }
   if(sq!==j.moves[q.k]){
-    Q.wrong++;
-    if(S.run && S.run.jid===j.id){
-      S.run.wrong++;
-      if(S.att && S.att[j.id]) S.att[j.id].wrong=S.run.wrong;   // 再開しても残す
+    // 盤の形が変わらない折り返しで定石手と重なるなら、向きが違うだけなので正解。
+    // 以後はその向きで見せるので、本人が打ったところに石が出る。
+    // ただし1手目はのぞく。まだ石が4つだけの盤は4とおりすべてで対称なので、
+    // これを認めると f5・d3・c4・e6 がどれも正解になってしまう。
+    const alt = q.k===0 ? -1 : sameMoveUnderSym(stt.board, j.moves[q.k], sq);
+    if(alt<0){
+      Q.wrong++;
+      if(S.run && S.run.jid===j.id){
+        S.run.wrong++;
+        if(S.att && S.att[j.id]) S.att[j.id].wrong=S.run.wrong;   // 再開しても残す
+      }
+      const cell=cellAt(r,c); cell.classList.add("ng");
+      setTimeout(()=>cell.classList.remove("ng"),330);
+      // 1手目だけは専用の文言にする
+      const first = q.k===0 && j.moves[0]==="f5";
+      msg(`${dsq} じゃないよ`,
+          first ? `${originSq()}以外は邪道だよ！` : "打てる手だけど、定石手は別のところ", "ng");
+      return;
     }
-    const cell=cellAt(r,c); cell.classList.add("ng");
-    setTimeout(()=>cell.classList.remove("ng"),330);
-    // 1手目だけは専用の文言にする
-    const first = q.k===0 && j.moves[0]==="f5";
-    msg(`${dsq} じゃないよ`,
-        first ? `${originSq()}以外は邪道だよ！` : "打てる手だけど、定石手は別のところ", "ng");
-    return;
+    RUNSYM=SYMMUL[RUNSYM][alt];
   }
 
   // ★は1手ごとではなく、定石を1本解ききったときに入る（下の awardJoseki）
@@ -3025,7 +3076,8 @@ function answer(r,c){
   (S.dsolved||(S.dsolved={}))[`${j.id}:${q.k}`]=true;   // きょうのぶん
   if(S.run && S.run.jid===j.id) S.run.done++;
   save();
-  cellAt(r,c).classList.add("ok");
+  const [mr,mc]=toRC(j.moves[q.k]);
+  cellAt(mr,mc).classList.add("ok");
   setTimeout(()=>paint(j.states[q.k+1].board, j.moves[q.k]),80);
 
   const rest=(S.run && S.run.jid===j.id) ? (S.run.all - S.run.done) : 0;
