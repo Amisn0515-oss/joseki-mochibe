@@ -29,8 +29,8 @@
 
 /* --- ひるまのゆめ（既定）------------------------------------------------ */
 :root{
-  --sky1:#FFE0EF;  --sky2:#E8DCFF;  --sky3:#D6F5EC;   /* 背景のグラデ3色 */
-  --panel:#A08EE0; --panel-2:#B7A7EE; --panel-dk:#6E5CB6; /* パネル面と側面 */
+  --sky1:#FFD4EA;  --sky2:#EEDCF8;  --sky3:#FFDFEF;   /* 背景のグラデ3色 */
+  --panel:#AC8BDC; --panel-2:#C4A6EC; --panel-dk:#7A58AC; /* パネル面と側面 */
   --outline:#4B3A80;                                   /* 全部の縁取り */
   --trim:#FFDCA6;  --trim-2:#F3AE63;                   /* 金モール相当 */
   --mint:#7FE6C4;  --mint-dk:#3FB795;
@@ -51,10 +51,10 @@
 /* 「システムにあわせる」人にはこちら。light を明示した人は除外する */
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --sky1:#3A2960; --sky2:#2A1F52; --sky3:#232F52;
-    --panel:#6E5CB8; --panel-2:#8471CE; --panel-dk:#463A85;
+    --sky1:#45285E; --sky2:#2A1F52; --sky3:#3A2450;
+    --panel:#7A5AB4; --panel-2:#9471C8; --panel-dk:#4F3880;
     --outline:#1F1745;
-    --paper:#4A3C86; --paper-2:#3E3175; --paper-dk:#2A2059;
+    --paper:#523A80; --paper-2:#452F70; --paper-dk:#2F1E55;
     --ink:#F1E9FF; --ink-2:#BFAEF0;
     --board:#63B7A0; --board-line:#3E8672;
     --star:#FFF6D8;
@@ -62,10 +62,10 @@
 }
 /* 手動でダークにした人にはこちらが勝つ */
 :root[data-theme="dark"]{
-  --sky1:#3A2960; --sky2:#2A1F52; --sky3:#232F52;
-  --panel:#6E5CB8; --panel-2:#8471CE; --panel-dk:#463A85;
+  --sky1:#45285E; --sky2:#2A1F52; --sky3:#3A2450;
+  --panel:#7A5AB4; --panel-2:#9471C8; --panel-dk:#4F3880;
   --outline:#1F1745;
-  --paper:#4A3C86; --paper-2:#3E3175; --paper-dk:#2A2059;
+  --paper:#523A80; --paper-2:#452F70; --paper-dk:#2F1E55;
   --ink:#F1E9FF; --ink-2:#BFAEF0;
   --board:#63B7A0; --board-line:#3E8672;
   --star:#FFF6D8;
@@ -285,7 +285,7 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
 .review .rv-t svg g{fill:none;stroke-linecap:round;stroke-linejoin:round}
 .review .rv-t svg .ol{stroke:var(--outline);stroke-width:7}
 .review .rv-t svg .in{stroke:#fff;stroke-width:2.8}
-.review .rv-l{font-size:11.5px;font-weight:700;-webkit-text-stroke-width:0;color:#4A2A6E}
+.review .rv-l{font-size:11.5px;font-weight:700;-webkit-text-stroke-width:0;color:#6B2347}
 .review .rv-l.dim{font-weight:400;opacity:.72}
 
 /* きょうの定石のそえ書き。カードの下に小さく置く */
@@ -312,7 +312,7 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
 .jcard .jbar{height:15px;border:2.5px solid var(--outline);border-radius:99px;
   background:var(--panel-dk);position:relative}
 .jcard .jbar i{display:block;height:100%;border-radius:99px;
-  background:linear-gradient(#9CEDD4,var(--mint));box-shadow:inset 0 2px 0 rgba(255,255,255,.6)}
+  background:linear-gradient(#FFC2DC,var(--pink));box-shadow:inset 0 2px 0 rgba(255,255,255,.6)}
 .jcard .jbar span{position:absolute;inset:0;display:grid;place-items:center;font-size:9.5px;
   line-height:1;font-family:"Baloo 2",cursive;font-weight:800;color:#fff;
   paint-order:stroke fill;-webkit-text-stroke:1.5px var(--outline)}
@@ -481,12 +481,12 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
   border:3px solid var(--outline);border-radius:14px;
   font-family:"Mochiy Pop One",sans-serif;font-size:11px;color:#fff;
   paint-order:stroke fill;-webkit-text-stroke:1.8px var(--outline);
-  background:linear-gradient(#B3A6E2,#8E7ECC);
-  box-shadow:0 4px 0 #5F4EA6, inset 0 2px 0 rgba(255,255,255,.35);
+  background:linear-gradient(#C0A6E2,#9A7ECC);
+  box-shadow:0 4px 0 #6A479E, inset 0 2px 0 rgba(255,255,255,.35);
   transition:transform .08s,box-shadow .08s}
 .tab[aria-selected="true"]{background:linear-gradient(var(--star),var(--gold));
   box-shadow:0 4px 0 var(--gold-dk), inset 0 2px 0 rgba(255,255,255,.75);transform:translateY(-2px)}
-.tab:active{transform:translateY(2px);box-shadow:0 1px 0 #5F4EA6}
+.tab:active{transform:translateY(2px);box-shadow:0 1px 0 #6A479E}
 .tab svg{width:22px;height:22px;fill:none;stroke:#fff;stroke-width:3;
   stroke-linecap:round;stroke-linejoin:round;-webkit-text-stroke:0;
   filter:drop-shadow(0 0 1.2px var(--outline)) drop-shadow(0 0 1.2px var(--outline))}
@@ -925,7 +925,7 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
     <button class="btn big" id="btnStart">くいずをとく</button>
 
     <!-- 復習。弱点だけを拾う小さな入口。出すものが無いときは出さない -->
-    <button class="btn sm lilac review" id="btnReview" hidden>
+    <button class="btn sm pink review" id="btnReview" hidden>
       <span class="rv-t">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <g class="ol"><path d="M4.6 15.4A8.4 8.4 0 1 0 6.6 6.4L3 10"/><path d="M3 4.6V10h5.4"/></g>
