@@ -1216,7 +1216,7 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
       <div class="je-label">なまえ</div>
       <input class="tin" id="jeName" type="text" maxlength="40">
 
-      <div class="je-label">何手目から出す？</div>
+      <div class="je-label">クイズを何手目から始める？</div>
       <div class="stepper">
         <button class="iconbtn" id="jeMinus" aria-label="1手はやくする">
           <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
@@ -2889,7 +2889,10 @@ function renderHome(animate){
   document.getElementById("hudStreak").textContent=S.streak;
 
   const d=new Date().getDay();
-  document.getElementById("ribDay").textContent=`${DAYS[d]}曜日の定石`;
+  // 何本あるのかが分からないと、きょうの量が見当つかない
+  const nToday=(S.weekdays[d]||[]).filter(id=>byId[id]).length;
+  document.getElementById("ribDay").textContent =
+    nToday ? `${DAYS[d]}曜日の定石　${nToday}本` : `${DAYS[d]}曜日の定石`;
 
   const ids=todayIds(), grid=document.getElementById("todayGrid");
   grid.innerHTML="";
@@ -3033,7 +3036,7 @@ function showQ(){
   document.getElementById("qName").textContent=j.n;
   document.getElementById("qLeft").textContent=Q.list.length-Q.i;
   document.getElementById("qBar").style.width=`${(Q.i/Q.list.length)*100}%`;
-  document.getElementById("qBarTxt").textContent=`${Q.i+1} / ${Q.list.length}`;
+  document.getElementById("qBarTxt").textContent=`${Q.i+1} / ${Q.list.length}問`;
 
   const black=stt.player===1;
   document.getElementById("qTurn").innerHTML=
