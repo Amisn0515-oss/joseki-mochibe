@@ -197,7 +197,9 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
          line-height:1;font-family:"Baloo 2",cursive;font-weight:800;color:#fff;
          paint-order:stroke fill;-webkit-text-stroke:1.7px var(--outline)}
 .coins{display:flex;flex-direction:column;gap:4px;flex-shrink:0}
-.coin{display:flex;align-items:center;gap:5px;padding:1px 9px 1px 2px;
+/* 押すと何の数字なのかが出る。記号だけでは伝わらないため */
+.coin{font:inherit;cursor:pointer;
+      display:flex;align-items:center;gap:5px;padding:1px 9px 1px 2px;
       background:var(--panel-dk);border:2.5px solid var(--outline);border-radius:99px;
       box-shadow:inset 0 2px 0 rgba(255,255,255,.18)}
 .coin i{width:19px;height:19px;border-radius:50%;display:grid;place-items:center;
@@ -262,6 +264,13 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
   paint-order:stroke fill;-webkit-text-stroke:2.8px var(--outline);
   opacity:0;transform:translateY(10px) scale(.9);transition:.28s cubic-bezier(.3,1.5,.6,1)}
 .toast.show{opacity:1;transform:translateY(0) scale(1)}
+
+/* 消えるなど、あとから困ることの注意書き。まぎれないように色を変える */
+.caution{font-size:11.5px;line-height:1.7;color:#5A2742;font-weight:700;
+  background:linear-gradient(#FFE6F0,#FFD4E6);
+  border:2.5px solid var(--outline);border-radius:12px;padding:7px 10px}
+:root[data-theme="dark"] .caution{color:#3A1228}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .caution{color:#3A1228}}
 
 /* きょうの定石のそえ書き。カードの下に小さく置く */
 .daynote{margin-top:9px}
@@ -863,8 +872,10 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
         <div class="xp"><i id="hudXp" style="width:0%"></i><span id="hudXpTxt">0 / 12</span></div>
       </div>
       <div class="coins">
-        <div class="coin"><i>★</i><b id="hudTotal">0</b></div>
-        <div class="coin"><i class="fire">♥</i><b id="hudStreak">0</b></div>
+        <button class="coin" id="coinStar" aria-label="★とは">
+          <i>★</i><b id="hudTotal">0</b></button>
+        <button class="coin" id="coinStreak" aria-label="♥とは">
+          <i class="fire">♥</i><b id="hudStreak">0</b></button>
       </div>
     </div>
 
@@ -945,7 +956,7 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
       <div class="days" id="dayPicker"></div>
       <div class="rowbar">
         <button class="btn sm" id="btnNew">＋ 定石を追加</button>
-        <button class="btn sm lilac" id="btnSelMode">選択</button>
+        <button class="btn sm lilac" id="btnSelMode">まとめて選ぶ</button>
       </div>
       <div class="reglist" id="regList"></div>
       <div class="rowbar" id="selBar" hidden>
@@ -955,8 +966,9 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
       <button class="btn sm lilac" id="btnUndo" disabled>もとにもどす</button>
       <div class="hint"><b>行を押すと、その定石をいま解けます</b>（曜日に関係なく）。
         鉛筆✎を押すと、その定石のせっていが開きます。<br>
-        ここに入っている定石が、その曜日に出題されます。<br>
-        外すとその曜日から消えます。自作の定石は、どの曜日にも無くなった時点で完全に消えます。</div>
+        ここに入っている定石が、その曜日に出題されます。外すとその曜日から消えます。</div>
+      <div class="caution">⚠️ 自分で追加した定石は、<b>すべての曜日から外すと削除されます</b>。
+        手順ごと消えて、もとに戻せません。残したいときは、どこか1つの曜日に入れておいてください。</div>
       <button class="btn sm lilac" id="btnAuto">収録定石を7曜日におまかせで配る</button>
     </div>
     <div style="height:6px"></div>
@@ -1033,7 +1045,8 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
         <circle class="pop" cx="238" cy="52" r="10" fill="#FFF" stroke="#4B3A80" stroke-width="4"/>
       </svg>
 
-      <div class="hint"><span id="f5MakerHint">初手が f5 でない棋譜を入れると、盤を回して <b>f5始点に直したもの</b>が出てきます。</span>
+      <div class="hint"><b>よそから持ってきた棋譜を、同じ向きにそろえるためのものです。</b><br>
+        <span id="f5MakerHint">初手が f5 でない棋譜を入れると、盤を回して <b>f5始点に直したもの</b>が出てきます。</span>
         盤の向きが変わるだけなので、手順の中身も強さも変わりません。</div>
       <textarea class="tin ta" id="f5In" rows="3" placeholder="d3c5f6f3c4..."></textarea>
       <div class="rowbar">
@@ -1150,6 +1163,8 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
     <div class="panel field">
       <div class="ribbon out sm">きろく</div>
       <div class="hint" id="resetHint">のべ正解 0問 ／ いまの姿 こもち</div>
+      <div class="hint">画面の上にある <b>★</b> はパーフェクトでためた点、
+        <b>♥</b> は何日つづけて開いたかです。</div>
       <button class="btn sm pink" id="btnReset">きろくをリセット</button>
     </div>
 
@@ -3479,6 +3494,12 @@ document.getElementById("mvAddGo").addEventListener("click",()=>{
   mvLoad(id);
 });
 
+/* ★と♥が何の数字なのかは、記号だけでは分からない。押したら教える */
+document.getElementById("coinStar").addEventListener("click",()=>
+  toast(`★ ${S.total} ／ パーフェクトでためた点`));
+document.getElementById("coinStreak").addEventListener("click",()=>
+  toast(`♥ ${S.streak} ／ 何日つづけて開いたか`));
+
 document.getElementById("btnToMovie").addEventListener("click",()=>{
   go("movie");
   if(!document.getElementById("mvBoard").children.length)
@@ -3626,7 +3647,7 @@ function renderReg(){
     }
     box.appendChild(row);
   }
-  document.getElementById("btnSelMode").textContent = selMode ? "選択をやめる" : "選択";
+  document.getElementById("btnSelMode").textContent = selMode ? "選ぶのをやめる" : "まとめて選ぶ";
   document.getElementById("selBar").hidden = !selMode;
 
   updateDelBtn();
