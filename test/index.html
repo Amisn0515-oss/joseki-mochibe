@@ -1,0 +1,3901 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>定石モチベ（テスト版）</title>
+
+<!-- ここはテスト版。本番と混ざらないように、ホーム画面には追加できないようにしてある
+     （manifest と apple-touch-icon をわざと外している） -->
+<meta name="theme-color" content="#A08EE0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="定石モチベ">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=Zen+Maru+Gothic:wght@500;700;900&family=Baloo+2:wght@700;800&display=swap">
+
+<style>
+/* =========================================================================
+   定石モチベ — スタイル
+   UIの作りはクラロワ系のゲームUI（分厚い枠・立体ボタン・リボン見出し・
+   カード・HUD）、色はゆめかわ（パステル）。
+   立体感の作り方は全部おなじ理屈で、
+     ・border で濃いアウトラインを回す
+     ・box-shadow の「0 Npx 0 色」で下に側面を作る（＝厚み）
+     ・inset の白いシャドウで上面のハイライトを作る
+     ・:active で translateY して側面を薄くする（＝押し込まれる）
+   ========================================================================= */
+
+/* --- ひるまのゆめ（既定）------------------------------------------------ */
+:root{
+  --sky1:#FFE0EF;  --sky2:#E8DCFF;  --sky3:#D6F5EC;   /* 背景のグラデ3色 */
+  --panel:#A08EE0; --panel-2:#B7A7EE; --panel-dk:#6E5CB6; /* パネル面と側面 */
+  --outline:#4B3A80;                                   /* 全部の縁取り */
+  --trim:#FFDCA6;  --trim-2:#F3AE63;                   /* 金モール相当 */
+  --mint:#7FE6C4;  --mint-dk:#3FB795;
+  --pink:#FF9FC8;  --pink-dk:#DE6A9E;
+  --lilac:#C9B6FF; --lilac-dk:#8E77D6;
+  --gold:#FFD26B;  --gold-dk:#E0992F;
+  --paper:#FFF7FC; --paper-2:#FFE9F5;                  /* カードの面 */
+  --paper-dk:#E0B6D0;
+  --ink:#4B3A80;                                       /* パネル外の文字 */
+  --ink-2:#7A6AA8;
+  --board:#8FDCC6; --board-line:#5CB49C;               /* 盤 */
+  --stone-b1:#6252A0; --stone-b2:#2E2352;              /* 黒石（濃い紫） */
+  --stone-w1:#FFFFFF; --stone-w2:#FFE6F2;              /* 白石（ほんのり桃） */
+  --ok:#3FB795; --ng:#F0709B;
+  --star:#FFEFB5;
+}
+/* --- よるのゆめ --------------------------------------------------------- */
+/* 「システムにあわせる」人にはこちら。light を明示した人は除外する */
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --sky1:#3A2960; --sky2:#2A1F52; --sky3:#232F52;
+    --panel:#6E5CB8; --panel-2:#8471CE; --panel-dk:#463A85;
+    --outline:#1F1745;
+    --paper:#4A3C86; --paper-2:#3E3175; --paper-dk:#2A2059;
+    --ink:#F1E9FF; --ink-2:#BFAEF0;
+    --board:#63B7A0; --board-line:#3E8672;
+    --star:#FFF6D8;
+  }
+}
+/* 手動でダークにした人にはこちらが勝つ */
+:root[data-theme="dark"]{
+  --sky1:#3A2960; --sky2:#2A1F52; --sky3:#232F52;
+  --panel:#6E5CB8; --panel-2:#8471CE; --panel-dk:#463A85;
+  --outline:#1F1745;
+  --paper:#4A3C86; --paper-2:#3E3175; --paper-dk:#2A2059;
+  --ink:#F1E9FF; --ink-2:#BFAEF0;
+  --board:#63B7A0; --board-line:#3E8672;
+  --star:#FFF6D8;
+}
+
+/* 色の置き場。見えないが、display:none にはしないこと（参照できなくなる） */
+.paints{position:absolute;width:0;height:0;overflow:hidden}
+*{box-sizing:border-box}
+/* hidden を付けたら必ず消える。display を指定した部品に負けないようにする */
+[hidden]{display:none!important}
+body{
+  margin:0;
+  /* 背景は空。ゆめかわの3色グラデを固定で敷く。
+     中央から左右対称に置くこと。片寄せにすると、アプリ（横440pxまでの中央寄せ）の
+     内側と外側で色が食い違い、板が二枚重なっているように見えてしまう */
+  background:
+    radial-gradient(115% 62% at 50% 0%,   var(--sky1) 0%, transparent 64%),
+    radial-gradient(115% 62% at 50% 100%, var(--sky3) 0%, transparent 64%),
+    var(--sky2);
+  background-attachment:fixed;
+  color:var(--ink);
+  font-family:"Zen Maru Gothic",-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;
+  font-weight:700; line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  -webkit-tap-highlight-color:transparent;
+  /* 同じ場所を2回続けて押したときの「ダブルタップで拡大」を止める。
+     指2本でひろげる拡大は、そのまま使える */
+  touch-action:manipulation;
+}
+button,.cell,.regrow,.chk,.tab{touch-action:manipulation}
+button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+/* 白抜き文字＋濃い縁取り。ゲームUIの見出しはだいたいこれ。
+   paint-order で「縁を先、文字を後」に描くと縁が内側に食い込まない */
+.out{
+  font-family:"Mochiy Pop One","Zen Maru Gothic",sans-serif;
+  color:#fff; paint-order:stroke fill;
+  -webkit-text-stroke:4px var(--outline);
+  letter-spacing:.02em;
+}
+.out.sm{-webkit-text-stroke-width:2.4px}
+.out.xs{-webkit-text-stroke-width:1.8px}
+.num{font-family:"Baloo 2",cursive;font-weight:800;font-variant-numeric:tabular-nums}
+
+.app{max-width:440px;margin:0 auto;min-height:100svh;
+     padding-bottom:calc(78px + env(safe-area-inset-bottom,0px))}
+.screen{display:none;flex-direction:column;gap:14px;padding:12px 14px 10px}
+/* 出題画面だけ、すき間と余白を詰める。浮いた分はぜんぶ盤の大きさに回す */
+#s-quiz.on{gap:5px;padding:8px 10px 6px}
+#s-quiz .msgbox{min-height:48px}
+#s-quiz .turnpill{padding:3px 18px}
+.screen.on{display:flex}
+
+/* ── 立体パネル ──────────────────────────────────────────
+   面はグラデ、下に側面、上にハイライト。これが全部の土台 */
+.panel{
+  position:relative;
+  background:linear-gradient(var(--panel-2),var(--panel));
+  border:3px solid var(--outline); border-radius:20px;
+  box-shadow:0 6px 0 var(--panel-dk), 0 12px 18px -6px rgba(50,30,95,.4),
+             inset 0 3px 0 rgba(255,255,255,.34);
+  padding:14px;
+}
+/* リボン見出し。パネルの上辺にまたがせる */
+.ribbon{
+  position:relative; margin:-26px auto 12px; width:fit-content; max-width:100%;
+  background:linear-gradient(var(--trim),var(--trim-2));
+  border:3px solid var(--outline); border-radius:99px;
+  box-shadow:0 4px 0 #C98737, inset 0 2px 0 rgba(255,255,255,.6);
+  padding:4px 20px; font-size:16px; white-space:nowrap;
+}
+
+/* ── 立体ボタン ─────────────────────────────────────────── */
+.btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
+  padding:14px 16px; border:3px solid var(--outline); border-radius:18px;
+  font-family:"Mochiy Pop One",sans-serif; font-size:17px; color:#fff;
+  paint-order:stroke fill; -webkit-text-stroke:2.8px var(--outline);
+  background:linear-gradient(#9CEDD4,var(--mint));
+  box-shadow:0 7px 0 var(--mint-dk), 0 13px 16px -6px rgba(50,30,95,.4),
+             inset 0 3px 0 rgba(255,255,255,.65);
+  transition:transform .08s ease, box-shadow .08s ease;
+}
+.btn:active{transform:translateY(6px);
+  box-shadow:0 1px 0 var(--mint-dk), inset 0 3px 0 rgba(255,255,255,.65)}
+.btn[disabled]{filter:grayscale(.55) brightness(.95);pointer-events:none}
+.btn.pink{background:linear-gradient(#FFBDDA,var(--pink));
+  box-shadow:0 7px 0 var(--pink-dk), 0 13px 16px -6px rgba(50,30,95,.4),
+             inset 0 3px 0 rgba(255,255,255,.65)}
+.btn.pink:active{box-shadow:0 1px 0 var(--pink-dk), inset 0 3px 0 rgba(255,255,255,.65)}
+.btn.lilac{background:linear-gradient(#DCCCFF,var(--lilac));
+  box-shadow:0 7px 0 var(--lilac-dk), 0 13px 16px -6px rgba(50,30,95,.4),
+             inset 0 3px 0 rgba(255,255,255,.65)}
+.btn.lilac:active{box-shadow:0 1px 0 var(--lilac-dk), inset 0 3px 0 rgba(255,255,255,.65)}
+.btn.sm{font-size:14px;padding:11px 12px;border-radius:15px;-webkit-text-stroke-width:2.2px}
+/* 大ボタンは斜めの光沢を1本流す */
+.btn.big{font-size:20px;padding:17px;overflow:hidden;position:relative;
+  -webkit-text-stroke-width:3.2px}
+.btn.big::after{content:"";position:absolute;top:-60%;left:-30%;width:26%;height:220%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.75),transparent);
+  transform:rotate(18deg); animation:shine 3.6s ease-in-out infinite}
+@keyframes shine{0%,72%{left:-30%}100%{left:120%}}
+
+/* ── 上部HUD：レベルバッジ＋経験値バー＋カウンター ───────── */
+.hud{display:flex;align-items:center;gap:9px;
+  background:linear-gradient(var(--panel-2),var(--panel));
+  border:3px solid var(--outline);border-radius:18px;padding:8px 10px;
+  box-shadow:0 5px 0 var(--panel-dk), 0 10px 14px -6px rgba(50,30,95,.35),
+             inset 0 2px 0 rgba(255,255,255,.34)}
+.lvl{flex-shrink:0;width:47px;height:47px;display:grid;place-items:center;
+     background:linear-gradient(var(--trim),var(--trim-2));
+     border:3px solid var(--outline); border-radius:15px;
+     box-shadow:0 4px 0 #C98737, inset 0 2px 0 rgba(255,255,255,.6);
+     line-height:1}
+.lvl small{display:block;font-size:9px;margin-bottom:1px;
+           font-family:"Baloo 2",cursive;font-weight:800;color:#7A4E12}
+.lvl b{font-size:21px;font-family:"Baloo 2",cursive;font-weight:800;color:#fff;
+       paint-order:stroke fill;-webkit-text-stroke:3px var(--outline)}
+.hud-mid{flex:1;min-width:0}
+.hud-name{font-size:14px;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;
+          white-space:nowrap;-webkit-text-stroke-width:2.4px}
+.xp{position:relative;height:20px;border:3px solid var(--outline);border-radius:99px;
+    background:var(--panel-dk);
+    box-shadow:0 3px 0 rgba(0,0,0,.16), inset 0 2px 4px rgba(0,0,0,.3)}
+.xp i{display:block;height:100%;border-radius:99px;
+      background:linear-gradient(var(--star),var(--gold));
+      box-shadow:inset 0 2px 0 rgba(255,255,255,.75);
+      transition:width .45s cubic-bezier(.3,1.3,.6,1)}
+.xp span{position:absolute;inset:0;display:grid;place-items:center;font-size:10.5px;
+         line-height:1;font-family:"Baloo 2",cursive;font-weight:800;color:#fff;
+         paint-order:stroke fill;-webkit-text-stroke:1.7px var(--outline)}
+.coins{display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+.coin{display:flex;align-items:center;gap:5px;padding:1px 9px 1px 2px;
+      background:var(--panel-dk);border:2.5px solid var(--outline);border-radius:99px;
+      box-shadow:inset 0 2px 0 rgba(255,255,255,.18)}
+.coin i{width:19px;height:19px;border-radius:50%;display:grid;place-items:center;
+        font-size:10px;font-style:normal;border:2px solid var(--outline);
+        background:linear-gradient(var(--star),var(--gold-dk));color:#fff}
+.coin i.fire{background:linear-gradient(#FFC5DC,var(--pink-dk))}
+.coin b{font-family:"Baloo 2",cursive;font-weight:800;font-size:13px;color:#fff;
+        paint-order:stroke fill;-webkit-text-stroke:1.8px var(--outline);min-width:14px;
+        text-align:center}
+
+/* ── アリーナ（モチの舞台）───────────────────────────────── */
+.arena{position:relative;overflow:hidden;
+  background:
+    radial-gradient(90% 55% at 50% 108%, rgba(255,255,255,.5) 0%, transparent 60%),
+    linear-gradient(#B6DCFF 0%, #DBC6FA 48%, #FFD1E7 100%);
+  border:3px solid var(--outline);border-radius:22px;
+  box-shadow:0 6px 0 var(--panel-dk), 0 14px 20px -8px rgba(50,30,95,.4),
+             inset 0 3px 0 rgba(255,255,255,.6);
+  padding:6px 8px 0;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .arena{
+    background:radial-gradient(90% 55% at 50% 108%, rgba(255,255,255,.16) 0%, transparent 60%),
+               linear-gradient(#3E3277 0%, #4A3480 48%, #5B3670 100%);
+  }
+}
+:root[data-theme="dark"] .arena{
+  background:radial-gradient(90% 55% at 50% 108%, rgba(255,255,255,.16) 0%, transparent 60%),
+             linear-gradient(#3E3277 0%, #4A3480 48%, #5B3670 100%);
+}
+/* ずかんの本。アリーナの右はしに置く */
+.bookbtn{position:absolute;right:8px;top:10px;z-index:3;
+  width:46px;height:46px;padding:0;cursor:pointer;font:inherit;
+  border:3px solid var(--outline);border-radius:14px;
+  background:linear-gradient(#FFE7A6,var(--gold));
+  box-shadow:0 4px 0 var(--gold-dk), inset 0 2px 0 rgba(255,255,255,.75);
+  transition:transform .08s,box-shadow .08s}
+.bookbtn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--gold-dk)}
+.bookbtn svg{display:block;width:26px;height:26px;margin:3px auto 0;
+  fill:#FFF9EC;stroke:var(--outline);stroke-width:2.4;
+  stroke-linejoin:round;stroke-linecap:round}
+.bookbtn .bcount{display:block;font-family:"Baloo 2",cursive;font-weight:800;
+  font-size:11px;line-height:1;color:var(--outline);margin-top:-1px}
+
+/* モチを何体並べても舞台の高さが変わらないように、下ぞろえで高さを決めておく */
+.arena{display:flex;flex-direction:column;justify-content:flex-end;
+  min-height:clamp(196px,33svh,270px)}
+#mochiSvg{display:block;width:100%;height:auto;max-height:clamp(190px,33svh,264px);position:relative;z-index:1}
+/* きらきら */
+.spark{position:absolute;width:12px;height:12px;background:var(--star);
+  clip-path:polygon(50% 0%,60% 40%,100% 50%,60% 60%,50% 100%,40% 60%,0% 50%,40% 40%);
+  opacity:.75;animation:twinkle 3s ease-in-out infinite}
+@keyframes twinkle{0%,100%{transform:scale(.6) rotate(0deg);opacity:.35}
+                   50%{transform:scale(1.15) rotate(20deg);opacity:.95}}
+.burst{position:absolute;left:50%;top:52%;pointer-events:none;z-index:2}
+.burst b{position:absolute;width:10px;height:10px;background:var(--star);
+  clip-path:polygon(50% 0%,60% 40%,100% 50%,60% 60%,50% 100%,40% 60%,0% 50%,40% 40%);
+  animation:fly .9s ease-out forwards}
+@keyframes fly{to{transform:translate(var(--dx),var(--dy)) scale(.2);opacity:0}}
+.toast{position:absolute;left:0;right:0;bottom:10px;text-align:center;z-index:3;
+  font-family:"Mochiy Pop One",sans-serif;font-size:15px;color:#fff;
+  paint-order:stroke fill;-webkit-text-stroke:2.8px var(--outline);
+  opacity:0;transform:translateY(10px) scale(.9);transition:.28s cubic-bezier(.3,1.5,.6,1)}
+.toast.show{opacity:1;transform:translateY(0) scale(1)}
+
+/* ── 定石カード ─────────────────────────────────────────── */
+.cardgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.jcard{position:relative;text-align:left;padding:8px 9px 9px;border-radius:14px;
+  border:3px solid var(--outline);
+  background:linear-gradient(var(--paper),var(--paper-2));
+  box-shadow:0 4px 0 var(--paper-dk), inset 0 2px 0 rgba(255,255,255,.85);
+  display:flex;flex-direction:column;gap:6px;min-height:106px}
+.jcard .lvtag{align-self:flex-start;font-size:10px;padding:1px 9px;border-radius:99px;
+  border:2.5px solid var(--outline);color:#fff;
+  paint-order:stroke fill;-webkit-text-stroke:1.6px var(--outline);
+  font-family:"Mochiy Pop One",sans-serif;
+  background:linear-gradient(#9CEDD4,var(--mint));box-shadow:inset 0 2px 0 rgba(255,255,255,.6)}
+.jcard.mid .lvtag{background:linear-gradient(#DCCCFF,var(--lilac))}
+.jcard .lvtag.own,.lvchip.own{background:linear-gradient(#FFC2DC,var(--pink));
+  padding:1px 10px;letter-spacing:.02em}
+.jcard .jn{flex:1;font-size:12px;line-height:1.42;word-break:auto-phrase;line-break:strict;color:var(--outline);font-weight:700}
+:root[data-theme="dark"] .jcard .jn{color:#F1E9FF}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .jcard .jn{color:#F1E9FF}}
+.jcard .jbar{height:15px;border:2.5px solid var(--outline);border-radius:99px;
+  background:var(--panel-dk);position:relative}
+.jcard .jbar i{display:block;height:100%;border-radius:99px;
+  background:linear-gradient(#9CEDD4,var(--mint));box-shadow:inset 0 2px 0 rgba(255,255,255,.6)}
+.jcard .jbar span{position:absolute;inset:0;display:grid;place-items:center;font-size:9.5px;
+  line-height:1;font-family:"Baloo 2",cursive;font-weight:800;color:#fff;
+  paint-order:stroke fill;-webkit-text-stroke:1.5px var(--outline)}
+.jcard{cursor:pointer;font:inherit;text-align:left;
+  transition:transform .08s ease,box-shadow .08s ease}
+.jcard:active{transform:translateY(3px);box-shadow:0 1px 0 var(--paper-dk)}
+/* パーフェクトを出した定石のカード。光りかたは以前と同じ金の枠 */
+.jcard.shine::after{content:"";position:absolute;inset:-3px;border-radius:14px;
+  border:3px solid var(--gold);box-shadow:0 0 12px var(--gold)}
+
+.empty{grid-column:1/-1;text-align:center;font-size:13px;color:#fff;padding:14px 4px;
+  -webkit-text-stroke:2px var(--outline);paint-order:stroke fill;
+  font-family:"Mochiy Pop One",sans-serif}
+
+/* ── 出題画面 ─────────────────────────────────────────── */
+.qbar{display:flex;align-items:center;gap:9px}
+.iconbtn{width:44px;height:44px;flex-shrink:0;display:grid;place-items:center;
+  border:3px solid var(--outline);border-radius:14px;
+  background:linear-gradient(#DCCCFF,var(--lilac));
+  box-shadow:0 4px 0 var(--lilac-dk), inset 0 2px 0 rgba(255,255,255,.6);
+  transition:transform .08s,box-shadow .08s}
+.iconbtn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--lilac-dk)}
+.iconbtn svg{width:22px;height:22px;fill:none;stroke:#fff;stroke-width:3.4;
+  stroke-linecap:round;stroke-linejoin:round;
+  filter:drop-shadow(0 0 1px var(--outline)) drop-shadow(0 0 1px var(--outline))}
+.qtitle{flex:1;min-width:0;font-size:14px;overflow:hidden;text-overflow:ellipsis;
+        white-space:nowrap;-webkit-text-stroke-width:2.4px}
+.turnpill{display:flex;align-items:center;justify-content:center;gap:9px;margin:0 auto;
+  padding:5px 18px;border:3px solid var(--outline);border-radius:99px;
+  background:linear-gradient(var(--panel-2),var(--panel));
+  box-shadow:0 4px 0 var(--panel-dk), inset 0 2px 0 rgba(255,255,255,.35);
+  font-family:"Mochiy Pop One",sans-serif;font-size:14px;color:#fff;
+  paint-order:stroke fill;-webkit-text-stroke:2.4px var(--outline)}
+.turnpill .d{width:18px;height:18px;border-radius:50%;border:2.5px solid var(--outline);
+  flex-shrink:0;-webkit-text-stroke:0}
+.turnpill .d.b{background:linear-gradient(var(--stone-b1),var(--stone-b2))}
+.turnpill .d.w{background:linear-gradient(var(--stone-w1),var(--stone-w2))}
+
+/* 盤。金モールの額縁に入れる */
+.boardframe{
+  --coord:10px;          /* 座標を書く帯の幅 */
+  --inset:7px;           /* 盤の枠線3px＋内側の余白4px。座標の位置合わせに使う */
+  width:100%;margin:0 auto;
+  /* 上と左に座標、右と下に同じ幅の余白。だから盤がちょうど真ん中に来る */
+  display:grid;
+  grid-template-columns:var(--coord) 1fr var(--coord);
+  grid-template-rows:   var(--coord) 1fr var(--coord);
+  background:linear-gradient(var(--trim),var(--trim-2));
+  border:3px solid var(--outline);border-radius:16px;padding:2px;
+  box-shadow:0 6px 0 #C98737, 0 14px 20px -8px rgba(50,30,95,.4),
+             inset 0 3px 0 rgba(255,255,255,.6)}
+/* 盤の上下にあるもの（見出し・手番・知らせ・ボタン・タブ）の合計が約314px。
+   残りぜんぶを盤に使う。横幅に収まるならそれ以上は広げない。
+   314 を小さくすると盤は大きくなるが、画面からはみ出してスクロールが出る。
+   max(300px, …) は下限。画面の短い機種でマスが小さくなりすぎるのを防ぐ
+   （そのときだけ、すこし縦にスクロールする）。                         */
+#s-quiz .boardframe{width:min(100%, max(300px, calc(100svh - 314px)))}
+.boardin{grid-column:2;grid-row:2;
+  background:var(--board-line);border:3px solid var(--outline);border-radius:11px;
+  padding:2px;box-shadow:inset 0 3px 8px rgba(0,0,0,.3)}
+.files,.ranks{font-family:"Baloo 2",cursive;font-weight:800;font-size:9.5px;
+  line-height:1;color:var(--outline)}
+/* 盤の枠線と内側の余白のぶんだけ内側に寄せると、マスの中心と数字がそろう */
+.files{grid-column:2;grid-row:1;display:grid;grid-template-columns:repeat(8,1fr);
+  gap:2.5px;align-items:center;justify-items:center;padding:0 var(--inset)}
+.ranks{grid-column:1;grid-row:2;display:grid;grid-template-rows:repeat(8,1fr);
+  gap:2.5px;align-items:center;justify-items:center;padding:var(--inset) 0}
+.board{display:grid;grid-template-columns:repeat(8,1fr);gap:2.5px;
+  background:var(--board-line);border-radius:6px}
+.cell{aspect-ratio:1;background:var(--board);border-radius:4px;position:relative;padding:0;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:inset 0 1.5px 0 rgba(255,255,255,.45);transition:background .12s}
+.cell:active{background:#A9ECD8}
+.cell .st{width:82%;height:82%;border-radius:50%;transform:scale(0);
+  border:2px solid var(--outline);
+  transition:transform .13s cubic-bezier(.34,1.6,.64,1)}
+.cell .st.on{transform:scale(1)}
+.cell .st.b{background:radial-gradient(circle at 34% 28%,var(--stone-b1),var(--stone-b2) 72%)}
+.cell .st.w{background:radial-gradient(circle at 34% 28%,var(--stone-w1),var(--stone-w2) 72%)}
+.cell.last::after{content:"";position:absolute;width:8px;height:8px;border-radius:50%;
+  background:var(--gold);border:2px solid var(--outline);bottom:-1px;right:-1px}
+.cell.ok{background:#7FE6C4 !important;box-shadow:0 0 0 3px var(--gold), inset 0 1.5px 0 rgba(255,255,255,.5)}
+.cell.ng{background:var(--ng) !important;animation:shake .32s}
+@keyframes shake{25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+.cell .mk{position:absolute;width:72%;height:72%;border-radius:50%;
+  display:grid;place-items:center;border:2.5px solid var(--outline);
+  font-family:"Baloo 2",cursive;font-weight:800;font-size:11px;color:#fff;
+  paint-order:stroke fill;-webkit-text-stroke:1.7px var(--outline);
+  background:linear-gradient(var(--stone-b1),var(--stone-b2))}
+.cell .mk.w{background:linear-gradient(var(--stone-w1),var(--stone-w2))}
+
+.msgbox{min-height:54px;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:2px;text-align:center;padding:8px 10px;
+  border:3px solid var(--outline);border-radius:16px;
+  background:linear-gradient(var(--paper),var(--paper-2));
+  box-shadow:0 4px 0 var(--paper-dk), inset 0 2px 0 rgba(255,255,255,.8)}
+.msgbox .t{font-family:"Mochiy Pop One",sans-serif;font-size:16px;color:#fff;
+  paint-order:stroke fill;-webkit-text-stroke:2.6px var(--outline)}
+.msgbox .t.ok{color:#B6FFE6} .msgbox .t.ng{color:#FFD3E2}
+.msgbox .s{font-size:12px;color:var(--outline);line-height:1.5}
+:root[data-theme="dark"] .msgbox .s{color:#EFE7FF}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .msgbox .s{color:#EFE7FF}}
+.seq{font-family:"Baloo 2",cursive;font-weight:700;font-size:12px;line-height:2;
+  color:var(--outline);word-break:break-all;margin-top:4px}
+:root[data-theme="dark"] .seq{color:#EFE7FF}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .seq{color:#EFE7FF}}
+.seq em{font-style:normal;color:#fff;background:var(--pink-dk);border-radius:99px;
+  padding:0 5px;margin-right:2px;font-size:10.5px}
+.qactions{display:flex;gap:9px}
+.qactions .btn{flex:1}
+
+/* ── 設定 ─────────────────────────────────────────────── */
+.field{display:flex;flex-direction:column;gap:9px}
+.hint{font-size:11.5px;color:#fff;line-height:1.6;opacity:.92;font-weight:500;
+      text-shadow:0 1px 0 rgba(40,25,80,.5)}
+.seg{display:flex;gap:6px}
+.seg button{flex:1;padding:9px 4px;border:3px solid var(--outline);border-radius:13px;
+  font-family:"Mochiy Pop One",sans-serif;font-size:13px;color:#fff;
+  paint-order:stroke fill;-webkit-text-stroke:2px var(--outline);
+  background:linear-gradient(#C6BCE8,#A497D2);
+  box-shadow:0 4px 0 #6E5CB6, inset 0 2px 0 rgba(255,255,255,.4);
+  transition:transform .08s,box-shadow .08s}
+.seg button[aria-pressed="true"]{background:linear-gradient(#9CEDD4,var(--mint));
+  box-shadow:0 4px 0 var(--mint-dk), inset 0 2px 0 rgba(255,255,255,.65)}
+.seg button:active{transform:translateY(3px);box-shadow:0 1px 0 var(--panel-dk)}
+.stepper{display:flex;align-items:center;justify-content:center;gap:12px}
+.stepper span{font-family:"Baloo 2",cursive;font-weight:800;font-size:16px;color:#fff;
+  paint-order:stroke fill;-webkit-text-stroke:2.4px var(--outline);min-width:100px;
+  text-align:center}
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.days button{padding:8px 0;border:3px solid var(--outline);border-radius:12px;
+  font-family:"Mochiy Pop One",sans-serif;font-size:13px;color:#fff;
+  paint-order:stroke fill;-webkit-text-stroke:2px var(--outline);
+  background:linear-gradient(#C6BCE8,#A497D2);
+  box-shadow:0 3px 0 #6E5CB6, inset 0 2px 0 rgba(255,255,255,.4)}
+.days button[aria-pressed="true"]{background:linear-gradient(var(--star),var(--gold));
+  box-shadow:0 3px 0 var(--gold-dk), inset 0 2px 0 rgba(255,255,255,.7)}
+.days button.sun[aria-pressed="true"]{background:linear-gradient(#FFBDDA,var(--pink));
+  box-shadow:0 3px 0 var(--pink-dk), inset 0 2px 0 rgba(255,255,255,.65)}
+.checks{display:flex;flex-direction:column;gap:7px}
+.chk{display:flex;align-items:center;gap:10px;padding:8px 11px;border-radius:13px;
+  border:3px solid var(--outline);cursor:pointer;font-size:12.5px;
+  background:linear-gradient(var(--paper),var(--paper-2));color:var(--outline);
+  box-shadow:0 3px 0 var(--paper-dk), inset 0 2px 0 rgba(255,255,255,.8)}
+:root[data-theme="dark"] .chk{color:#F1E9FF}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .chk{color:#F1E9FF}}
+.chk input{appearance:none;width:23px;height:23px;border-radius:8px;flex-shrink:0;
+  border:3px solid var(--outline);background:#fff;position:relative;transition:.12s}
+.chk input:checked{background:linear-gradient(#9CEDD4,var(--mint))}
+.chk input:checked::after{content:"";position:absolute;left:5px;top:0px;width:5px;height:11px;
+  border:solid var(--outline);border-width:0 3px 3px 0;transform:rotate(42deg)}
+.chk .nm{flex:1;min-width:0}
+.chk .mv{font-family:"Baloo 2",cursive;font-weight:800;font-size:11px;opacity:.7;flex-shrink:0}
+
+/* ── 下部タブ ─────────────────────────────────────────── */
+.tabs{transition:transform .18s ease}
+body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;
+  background:linear-gradient(var(--panel-2),var(--panel));
+  border-top:3px solid var(--outline);
+  box-shadow:0 -4px 14px rgba(50,30,95,.25);
+  padding:7px 0 calc(7px + env(safe-area-inset-bottom,0px))}
+.tabs-in{max-width:440px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);
+  gap:7px;padding:0 10px}
+.tab{display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 2px 4px;
+  border:3px solid var(--outline);border-radius:14px;
+  font-family:"Mochiy Pop One",sans-serif;font-size:11px;color:#fff;
+  paint-order:stroke fill;-webkit-text-stroke:1.8px var(--outline);
+  background:linear-gradient(#B3A6E2,#8E7ECC);
+  box-shadow:0 4px 0 #5F4EA6, inset 0 2px 0 rgba(255,255,255,.35);
+  transition:transform .08s,box-shadow .08s}
+.tab[aria-selected="true"]{background:linear-gradient(var(--star),var(--gold));
+  box-shadow:0 4px 0 var(--gold-dk), inset 0 2px 0 rgba(255,255,255,.75);transform:translateY(-2px)}
+.tab:active{transform:translateY(2px);box-shadow:0 1px 0 #5F4EA6}
+.tab svg{width:22px;height:22px;fill:none;stroke:#fff;stroke-width:3;
+  stroke-linecap:round;stroke-linejoin:round;-webkit-text-stroke:0;
+  filter:drop-shadow(0 0 1.2px var(--outline)) drop-shadow(0 0 1.2px var(--outline))}
+
+/* ── 定石とうろく・新規定石 ─────────────────────────────── */
+.rowbar{display:flex;gap:8px}
+.rowbar[hidden]{display:none}
+.rowbar .btn{flex:1}
+.reglist{display:flex;flex-direction:column;gap:7px}
+.regrow{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:13px;
+  border:3px solid var(--outline);font-size:12.5px;color:var(--outline);
+  background:linear-gradient(var(--paper),var(--paper-2));
+  box-shadow:0 3px 0 var(--paper-dk), inset 0 2px 0 rgba(255,255,255,.8)}
+:root[data-theme="dark"] .regrow{color:#F1E9FF}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .regrow{color:#F1E9FF}}
+.regrow input{appearance:none;width:22px;height:22px;border-radius:7px;flex-shrink:0;
+  border:3px solid var(--outline);background:#fff;position:relative}
+.regrow input:checked{background:linear-gradient(#FFBDDA,var(--pink))}
+.regrow input:checked::after{content:"";position:absolute;left:5px;top:0;width:5px;height:10px;
+  border:solid var(--outline);border-width:0 3px 3px 0;transform:rotate(42deg)}
+.regrow .rmain{flex:1;min-width:0;display:flex;flex-direction:column;
+  align-items:flex-start;gap:4px}
+.regrow .nm{line-height:1.4}
+.regrow .rsub{display:flex;gap:5px;flex-wrap:wrap}
+.regrow .mv{font-family:"Baloo 2",cursive;font-weight:800;font-size:11px;opacity:.7;flex-shrink:0}
+/* けいとうの札。系統ごとに色を変えて、ひと目で分かるようにする */
+.tgchip{font-size:9.5px;padding:1px 7px;border-radius:99px;flex-shrink:0;
+  font-weight:800;color:#4B3A80;border:2px solid var(--outline);
+  background:#EFE7FF;line-height:1.5;white-space:nowrap}
+.tgchip.usagi{background:#FFD9EA}
+.tgchip.tora {background:#FFDCA6}
+.tgchip.neko {background:#FFE9B8}
+.tgchip.usi  {background:#CFF2D8}
+.tgchip.nezumi{background:#D9E7FF}
+.tgchip.rose {background:#F2CFFF}
+.tgchip.hoka {background:#E6E1F0}
+.lvchip{font-size:10px;padding:1px 8px;border-radius:99px;flex-shrink:0;color:#fff;
+  border:2.5px solid var(--outline);font-family:"Mochiy Pop One",sans-serif;
+  paint-order:stroke fill;-webkit-text-stroke:1.6px var(--outline);
+  background:linear-gradient(#9CEDD4,var(--mint));box-shadow:inset 0 2px 0 rgba(255,255,255,.6)}
+.lvchip.mid{background:linear-gradient(#DCCCFF,var(--lilac))}
+
+
+.tin{width:100%;padding:11px 13px;border:3px solid var(--outline);border-radius:13px;
+  background:var(--paper);color:var(--outline);font-family:inherit;font-weight:700;
+  font-size:16px;box-shadow:inset 0 2px 0 rgba(255,255,255,.7)}
+:root[data-theme="dark"] .tin{color:#F1E9FF}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .tin{color:#F1E9FF}}
+.tin::placeholder{color:var(--ink-2);opacity:.7;font-weight:500}
+.ta{font-family:"Baloo 2",monospace;resize:vertical;line-height:1.7}
+.seqline{padding:9px 12px;border-radius:11px;background:var(--panel-dk);color:#fff;
+  font-family:"Baloo 2",cursive;font-weight:700;font-size:12px;word-break:break-all;
+  line-height:1.8;border:2.5px solid var(--outline)}
+.result{padding:10px 13px;border-radius:12px;font-size:13px;font-weight:700;line-height:1.7;
+  border:3px solid var(--outline)}
+.result[hidden]{display:none}
+.result.ok{background:linear-gradient(#B6F2DE,#7FE6C4);color:#14503E;
+  box-shadow:0 3px 0 var(--mint-dk)}
+.result.ng{background:linear-gradient(#FFC2D4,#FF93B4);color:#4B1E2E;
+  box-shadow:0 3px 0 #D45A82}
+.result .btn{margin-top:9px}
+/* 打てるマスの目印（盤に打って作るとき） */
+.cell .hint-dot{position:absolute;width:26%;height:26%;border-radius:50%;
+  background:rgba(75,58,128,.28)}
+
+/* ── 定石データのまちがい表示 ───────────────────────────── */
+.warn{background:linear-gradient(#FFC2D4,#FF93B4);border:3px solid var(--outline);
+  border-radius:16px;padding:11px 13px;font-size:12.5px;line-height:1.8;color:#4B1E2E;
+  font-weight:700;box-shadow:0 4px 0 #D45A82, inset 0 2px 0 rgba(255,255,255,.55)}
+.warn[hidden]{display:none}
+.warn b{display:block;font-family:"Mochiy Pop One",sans-serif;font-size:13.5px;
+  margin-bottom:4px;color:#3A1422}
+
+/* ── 定石ごとの設定 ─────────────────────────────────────── */
+.je-label{font-family:"Mochiy Pop One",sans-serif;font-size:12.5px;color:#fff;
+  paint-order:stroke fill;-webkit-text-stroke:2px var(--outline);align-self:flex-start}
+.je-info{font-size:12px;color:#fff;text-align:center;font-weight:700;line-height:1.6;
+  text-shadow:0 1px 0 rgba(40,25,80,.5)}
+.je-info.zero{color:#FFD3E2}
+/* 番を選ぶボタンの中に置く小さな石 */
+.sd{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:-1px;
+  margin-right:4px;border:2px solid var(--outline);-webkit-text-stroke:0}
+.sd.b{background:linear-gradient(var(--stone-b1),var(--stone-b2))}
+.sd.w{background:linear-gradient(var(--stone-w1),var(--stone-w2))}
+/* 一覧の行をタップできることが分かるようにする */
+.regrow.tapable{width:100%;text-align:left;cursor:pointer;font:inherit;
+  transition:transform .08s,box-shadow .08s}
+.regrow.tapable:active{transform:translateY(3px);box-shadow:0 1px 0 var(--paper-dk)}
+.regrow .pen{flex-shrink:0;font:inherit;font-size:15px;opacity:.55;cursor:pointer;
+  background:none;border:0;padding:4px 2px 4px 8px;color:inherit;
+  display:inline-block;transform:scaleX(-1)}   /* 鉛筆を左右反転させる */
+.regrow .pen:active{opacity:1}
+.regrow .atchip.side{background:linear-gradient(#DCCCFF,var(--lilac))}
+.regrow .atchip{flex-shrink:0;font-size:9.5px;padding:1px 7px;border-radius:99px;color:#fff;
+  border:2px solid var(--outline);background:linear-gradient(var(--star),var(--gold));
+  paint-order:stroke fill;-webkit-text-stroke:1.4px var(--outline);
+  font-family:"Mochiy Pop One",sans-serif}
+
+/* ── F5始点メーカー ─────────────────────────────────────── */
+/* アプリのアイコンと同じ、水色→藤→桃のグラデーション */
+#f5maker{background:linear-gradient(#BFE0FF 0%,#DCC9FA 48%,#FFD1E7 100%);
+  box-shadow:0 6px 0 #C9A9DE, 0 12px 18px -6px rgba(50,30,95,.4),
+             inset 0 3px 0 rgba(255,255,255,.6)}
+/* 明るい地になったので、中の文字は濃い色にする */
+#f5maker .hint{color:var(--outline);opacity:1;text-shadow:none}
+#f5maker .je-label{color:var(--outline);-webkit-text-stroke:0}
+.factory{display:block;width:100%;max-width:280px;height:auto;margin:2px auto 0}
+.factory .smoke circle{animation:puff 2.6s ease-in-out infinite}
+.factory .smoke circle:nth-child(2){animation-delay:.3s}
+.factory .smoke circle:nth-child(3){animation-delay:.6s}
+@keyframes puff{0%,100%{opacity:.35;transform:translateY(3px)}50%{opacity:1;transform:translateY(-3px)}}
+.factory .pop{animation:popout 2.6s ease-in-out infinite}
+@keyframes popout{0%,55%{opacity:0;transform:translateY(8px)}70%,100%{opacity:1;transform:translateY(0)}}
+@media (prefers-reduced-motion:reduce){
+  .factory .smoke circle,.factory .pop{animation:none;opacity:1;transform:none}
+}
+.kifuout{font-family:"Baloo 2",monospace;font-weight:700;font-size:13px;line-height:1.8;
+  word-break:break-all;background:rgba(255,255,255,.55);border-radius:9px;
+  padding:8px 10px;margin:7px 0}
+
+/* ── 定石を1本終えたときの知らせ ───────────────────────── */
+.qtoast{position:fixed;inset:0;z-index:46;display:grid;place-items:center;padding:24px;
+  background:radial-gradient(80% 60% at 50% 45%, rgba(84,52,140,.86), rgba(24,14,52,.92));
+  backdrop-filter:blur(2px);
+  opacity:0;pointer-events:none;transition:opacity .22s ease}
+.qtoast.show{opacity:1;pointer-events:auto}
+.qt-card{width:100%;max-width:320px;display:flex;flex-direction:column;align-items:center;
+  gap:3px;text-align:center;padding:18px 18px 16px;
+  border:3px solid var(--outline);border-radius:22px;
+  background:linear-gradient(#FFD3E8,var(--pink));
+  box-shadow:0 7px 0 var(--pink-dk), 0 18px 28px -8px rgba(20,10,45,.6),
+             inset 0 3px 0 rgba(255,255,255,.7);
+  transform:translateY(-12px) scale(.92);transition:.28s cubic-bezier(.3,1.5,.6,1)}
+.qtoast.show .qt-card{transform:translateY(0) scale(1)}
+.qtoast.perfect .qt-card{background:linear-gradient(var(--star),var(--gold));
+  box-shadow:0 7px 0 var(--gold-dk), 0 18px 28px -8px rgba(20,10,45,.6),
+             inset 0 3px 0 rgba(255,255,255,.75)}
+.qtoast.none .qt-card{background:linear-gradient(#C6BCE8,#A497D2);
+  box-shadow:0 7px 0 #6E5CB6, 0 18px 28px -8px rgba(20,10,45,.6),
+             inset 0 3px 0 rgba(255,255,255,.4)}
+.qtoast .qt-body{display:flex;flex-direction:column;align-items:center;gap:3px}
+.qtoast .btn{margin-top:13px;max-width:200px}
+.qtoast .qt-n{font-size:12.5px;color:#fff;font-weight:700;
+  text-shadow:0 1px 0 rgba(40,25,80,.55);line-height:1.4}
+.qtoast .qt-p{font-family:"Mochiy Pop One",sans-serif;font-size:19px;color:#fff;
+  paint-order:stroke fill;-webkit-text-stroke:4px var(--outline)}
+@media (prefers-reduced-motion:reduce){ .qtoast,.qt-card{transition:none} }
+
+/* 自作の絵を進化演出の影として出すときの見せかた */
+.as-shadow{filter:brightness(0) invert(1)}
+
+/* けいとうのしぼりこみ。数が多いので、折りかえして並べる */
+.tagbar{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin:2px 0 1px}
+.tagbar button{font:inherit;font-size:10.5px;font-weight:800;cursor:pointer;
+  padding:3px 10px;border-radius:99px;color:#4B3A80;
+  border:2.5px solid var(--outline);background:#F3EEFF;
+  box-shadow:0 2px 0 var(--paper-dk);transition:transform .07s,box-shadow .07s}
+.tagbar button:active{transform:translateY(2px);box-shadow:none}
+/* 棋譜の欄は、2文字ずつ離して読みやすく */
+#jeKifu{font-family:"Baloo 2",cursive;font-weight:700;letter-spacing:.06em;
+  text-align:center;line-height:1.7}
+/* タグは数が多いので、高さを決めて中でスクロールさせる */
+.tagpick{max-height:112px;overflow-y:auto;padding:3px;
+  background:rgba(255,255,255,.45);border-radius:12px}
+.tagbar button[aria-pressed="true"]{background:linear-gradient(#FFE7A6,var(--gold));
+  box-shadow:0 2px 0 var(--gold-dk)}
+
+/* ── 定石ムービー ────────────────────────────────────────
+   定石の数が多いので、一覧は高さを決めて中でスクロールさせる        */
+.mv-list{max-height:152px;overflow-y:auto;padding:2px}
+/* 定石を選んだら一覧はたたむ。操作ボタンが画面の外に出ないようにするため */
+.mv-toggle{font:inherit;cursor:pointer}
+/* 定石名が長いと帯からはみ出すので、入りきらない分は … で切る */
+#mvPickToggle{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+#mvPick.folded .tagbar,
+#mvPick.folded .hint,
+#mvPick.folded .mv-list{display:none}
+#mvPick.folded{padding-bottom:8px}
+.mv-list .chk.now{background:linear-gradient(#FFE7A6,var(--gold));
+  box-shadow:0 3px 0 var(--gold-dk)}
+#s-movie.on{gap:7px;padding:8px 10px 6px}
+/* 一覧をたたんだときの、盤以外の合計が約395px。盤はその残り */
+#s-movie .boardframe{width:min(100%, max(230px, calc(100svh - 395px)))}
+#s-movie .msgbox{min-height:44px}
+#s-movie .turnpill{padding:3px 18px}
+/* 手順。いま打ったところを目立たせる */
+.mv-seq{display:flex;flex-wrap:wrap;gap:3px 7px;justify-content:center;
+  font-family:"Baloo 2",cursive;font-weight:700;font-size:11px;color:var(--outline)}
+.mv-seq i{font-style:normal;opacity:.45}
+.mv-seq i.done{opacity:1}
+.mv-seq i.now{opacity:1;background:var(--gold);border-radius:6px;padding:0 4px}
+
+/* ── モチのコレクション ─────────────────────────────────── */
+.colgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.colcell{position:relative;min-width:0;padding:5px 3px 4px;border-radius:13px;
+  border:3px solid var(--outline);cursor:pointer;font:inherit;
+  background:linear-gradient(var(--paper),var(--paper-2));
+  box-shadow:0 3px 0 var(--paper-dk), inset 0 2px 0 rgba(255,255,255,.8);
+  transition:transform .08s,box-shadow .08s}
+.colcell:active{transform:translateY(2px);box-shadow:0 1px 0 var(--paper-dk)}
+.colcell svg{display:block;width:100%;height:auto}
+.colcell.locked svg{filter:brightness(0);opacity:.26}
+.colcell .cname{display:block;font-size:9px;line-height:1.3;color:var(--outline);
+  font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+:root[data-theme="dark"] .colcell .cname{color:#F1E9FF}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .colcell .cname{color:#F1E9FF}}
+.colcell .cneed{display:block;font-family:"Baloo 2",cursive;font-weight:800;
+  font-size:9.5px;color:var(--ink-2);opacity:.8}
+.colcell.now{border-color:var(--gold);box-shadow:0 3px 0 var(--gold-dk),0 0 10px var(--gold)}
+/* ホームに出すかどうかのチェック。マスの左上に置く */
+.colchk{position:absolute;left:4px;top:4px;z-index:2;
+  width:22px;height:22px;line-height:19px;text-align:center;
+  font-size:13px;font-weight:900;color:transparent;
+  border:2.5px solid var(--outline);border-radius:8px;background:#fff}
+.colchk.on{background:linear-gradient(#FFE7A6,var(--gold));color:var(--outline)}
+
+/* ずかんのカード。中身が多いので、はみ出したぶんは中でスクロールさせる */
+.zk-card{max-width:400px;width:100%}
+.zk-title{font-size:17px;margin-bottom:2px}
+.zk-scroll{width:100%;max-height:56svh;overflow-y:auto;overflow-x:hidden;padding:2px}
+/* 名前が長いので、ずかんの中は3列にして読めるようにする */
+.zk-card .colgrid{width:100%;grid-template-columns:repeat(3,1fr)}
+.zk-card .colcell .cname{font-size:10px}
+.zk-sub{font-size:11px;font-weight:800;color:#fff;margin:6px 2px 4px;
+  text-shadow:0 1px 0 rgba(40,25,80,.5)}
+.zk-sub:first-child{margin-top:0}
+.zk-count{font-size:11.5px;color:#fff;font-weight:700;text-align:center;
+  text-shadow:0 1px 0 rgba(40,25,80,.5)}
+
+/* 一体ごとの詳しい紹介 */
+.mi-svg{width:60%;max-width:170px;height:auto;margin:0 auto}
+.mi-name{font-size:19px}
+.mi-need{font-family:"Baloo 2",cursive;font-weight:800;font-size:12.5px;color:#fff;
+  text-shadow:0 1px 0 rgba(40,25,80,.5)}
+.mi-text{font-size:13px;line-height:1.8;color:#fff;font-weight:700;text-align:center;
+  text-shadow:0 1px 0 rgba(40,25,80,.5)}
+.mi-note{font-size:11.5px;line-height:1.7;color:#fff;opacity:.9;text-align:center;
+  font-weight:500;text-shadow:0 1px 0 rgba(40,25,80,.5)}
+
+/* おぼえ終わった定石には、うすく印をつける */
+.chk.got{background:linear-gradient(#EFFBF2,#DDF3E4)}
+.chk.got .nm::after{content:" ✓";color:#3E9A63;font-weight:800}
+
+/* そのモチに必要な定石の一覧。おぼえたものには印がつく */
+.mi-list{width:100%;max-height:26svh;overflow-y:auto;margin-top:2px;
+  display:flex;flex-direction:column;gap:4px}
+.mi-list i{display:flex;align-items:center;gap:6px;font-style:normal;
+  font-size:11.5px;font-weight:700;color:var(--outline);
+  background:#FFF6FB;border:2px solid var(--outline);border-radius:10px;
+  padding:4px 8px;text-align:left}
+.mi-list i.got{background:linear-gradient(#EFFBF2,#DDF3E4)}
+.mi-list i b{margin-left:auto;font-family:"Baloo 2",cursive;font-size:12px}
+
+/* ── 定石名の帯 ─────────────────────────────────────────
+   左から入って、真ん中でひと呼吸おいて、右へ抜ける。
+   pointer-events:none にしてあるので、流れている間も盤は押せる */
+.nameband{position:fixed;left:0;right:0;top:33%;z-index:45;
+  pointer-events:none;overflow:hidden}
+.nameband[hidden]{display:none}
+.nameband .band{display:flex;align-items:center;justify-content:center;gap:12px;
+  padding:11px 22px;
+  background:linear-gradient(90deg,#FFC9E4 0%,#E4CDFF 38%,#CDE3FF 68%,#BFF0DE 100%);
+  border-top:3px solid var(--outline);border-bottom:3px solid var(--outline);
+  box-shadow:0 8px 22px -6px rgba(60,35,110,.5),
+             inset 0 3px 0 rgba(255,255,255,.7),
+             inset 0 -3px 0 rgba(120,80,170,.18)}
+.nameband .t{font-family:"Mochiy Pop One",sans-serif;
+  font-size:clamp(13px,4.4vw,19px);color:#fff;white-space:nowrap;
+  paint-order:stroke fill;-webkit-text-stroke:3.6px var(--outline)}
+.nameband .s{width:15px;height:15px;flex-shrink:0;background:var(--star);
+  clip-path:polygon(50% 0%,60% 40%,100% 50%,60% 60%,50% 100%,40% 60%,0% 50%,40% 40%);
+  filter:drop-shadow(0 0 5px #fff)}
+.nameband.run .band{animation:bandSlide 1.6s cubic-bezier(.25,.9,.3,1) forwards}
+.nameband.run .s{animation:bandTwinkle .7s ease-in-out infinite}
+@keyframes bandSlide{
+  0%  {transform:translateX(-115%) rotate(-2.5deg); opacity:0}
+  18% {transform:translateX(0) rotate(0);            opacity:1}
+  70% {transform:translateX(0) rotate(0);            opacity:1}
+  100%{transform:translateX(115%) rotate(2.5deg);    opacity:0}
+}
+@keyframes bandTwinkle{
+  0%,100%{transform:scale(.65) rotate(0)}
+  50%    {transform:scale(1.2) rotate(28deg)}
+}
+
+/* ── たしかめダイアログ ─────────────────────────────────── */
+/* ブラウザの confirm はサンドボックスの中では出せないので、自前で用意する */
+.ask{position:fixed;inset:0;z-index:55;display:grid;place-items:center;padding:24px;
+  background:rgba(30,18,62,.72);backdrop-filter:blur(2px)}
+.ask[hidden]{display:none}
+.ask-card{width:100%;max-width:320px;display:flex;flex-direction:column;gap:13px;
+  background:linear-gradient(var(--panel-2),var(--panel));
+  border:3px solid var(--outline);border-radius:20px;padding:18px 17px;
+  box-shadow:0 6px 0 var(--panel-dk), 0 16px 26px -8px rgba(20,10,45,.6),
+             inset 0 3px 0 rgba(255,255,255,.34)}
+.ask-title{font-size:17px;text-align:center}
+.ask-body{font-size:13.5px;line-height:1.75;color:#fff;text-align:center;font-weight:700;
+  text-shadow:0 1px 0 rgba(40,25,80,.5)}
+
+/* ── 登場演出 ─────────────────────────────────────────────
+   グレーの影で出てきて、色がぱっと戻り、紙ふぶきと光で華やかに出る       */
+.evo{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:22px;
+  background:radial-gradient(80% 60% at 50% 40%, rgba(84,52,140,.93), rgba(24,14,52,.96));
+  backdrop-filter:blur(3px)}
+.evo[hidden]{display:none}
+.evo-card{width:100%;max-width:330px;display:flex;flex-direction:column;
+  align-items:center;gap:14px}
+.evo-stage{position:relative;width:100%;display:grid;place-items:center}
+.evo-svg{position:relative;z-index:2;width:100%;height:auto;max-height:44svh;
+  filter:drop-shadow(0 0 26px rgba(255,231,168,.6));
+  transition:filter .55s ease, transform .55s cubic-bezier(.34,1.5,.64,1)}
+/* まだ名前も分からない、影の状態 */
+.evo-svg.shadow{filter:grayscale(1) brightness(.42) contrast(.85)
+                       drop-shadow(0 0 14px rgba(0,0,0,.5));
+  transform:scale(.86)}
+.evo-svg.pop{animation:evopop .7s cubic-bezier(.34,1.6,.64,1)}
+@keyframes evopop{0%{transform:scale(.86)}55%{transform:scale(1.14)}100%{transform:scale(1)}}
+
+/* うしろで回る光。影のあいだは止めておく */
+.evo-rays{position:absolute;z-index:1;width:150%;aspect-ratio:1;border-radius:50%;
+  opacity:0;transition:opacity .5s ease;
+  background:repeating-conic-gradient(from 0deg,
+    rgba(255,239,190,.42) 0deg 9deg, transparent 9deg 22deg);
+  -webkit-mask-image:radial-gradient(closest-side, #000 30%, transparent 72%);
+          mask-image:radial-gradient(closest-side, #000 30%, transparent 72%)}
+.evo-rays.on{opacity:1;animation:rays 9s linear infinite}
+@keyframes rays{to{transform:rotate(360deg)}}
+
+/* 紙ふぶき。登場の瞬間だけ、外に向かって散る */
+.evo-burst{position:absolute;z-index:3;inset:0;pointer-events:none}
+.evo-burst i{position:absolute;left:50%;top:50%;width:9px;height:13px;border-radius:2px;
+  opacity:0;transform:translate(-50%,-50%)}
+.evo-burst.go i{animation:burst .95s cubic-bezier(.2,.7,.35,1) forwards}
+@keyframes burst{
+  0%  {opacity:0; transform:translate(-50%,-50%) rotate(0deg) scale(.3)}
+  12% {opacity:1}
+  100%{opacity:0;
+       transform:translate(calc(-50% + var(--dx)), calc(-50% + var(--dy)))
+                 rotate(var(--rot)) scale(1)}}
+.evo-txt{font-size:16px;text-align:center;line-height:1.65;min-height:56px}
+.evo-txt b{-webkit-text-stroke-width:2.4px}
+.evo .btn{max-width:230px}
+.evo-flash{position:fixed;inset:0;z-index:60;background:#fff;opacity:0;
+  pointer-events:none;transition:opacity .16s linear}
+.evo-flash.on{opacity:1}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;
+                       transition-duration:.001ms !important}
+  .evo-rays{animation:none !important}
+  /* 帯だけは動かさずにその場で出す。消えてしまうと定石名が読めなくなるため */
+  .nameband.run .band{animation:none !important;transform:none !important;opacity:1 !important}
+  .nameband.run .s{animation:none !important}
+}
+</style>
+
+<!-- モチの塗りに使う色。どの画面からも参照するので、
+     隠れない場所にひとつだけ置いておく（消すと塗りが抜けます） -->
+<svg class="paints" aria-hidden="true">
+  <defs>
+    <linearGradient id="gMochi" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="60%" stop-color="#FFF4FA"/>
+      <stop offset="100%" stop-color="#FFE0EF"/>
+    </linearGradient>
+    <!-- モチの体の色。12色ぶんを起動時にここへ足す（下の makePaints） -->
+    <radialGradient id="gPed" cx="50%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#FFE9F5"/>
+      <stop offset="100%" stop-color="#D9BDE8"/>
+    </radialGradient>
+  </defs>
+</svg>
+
+<div class="app">
+
+  <!-- ══════════ ホーム ══════════ -->
+  <section class="screen on" id="s-home">
+
+    <!-- 定石データに打てない手が混じっていたら、ここに出る -->
+    <div class="warn" id="dataWarn" hidden></div>
+
+    <!-- 上部HUD：レベル・つぎの姿までのゲージ・カウンター -->
+    <div class="hud">
+      <div class="lvl"><div><small>LV</small><b class="num" id="hudLv">1</b></div></div>
+      <div class="hud-mid">
+        <div class="out sm hud-name" id="hudName">つきたてもち</div>
+        <div class="xp"><i id="hudXp" style="width:0%"></i><span id="hudXpTxt">0 / 12</span></div>
+      </div>
+      <div class="coins">
+        <div class="coin"><i>★</i><b id="hudTotal">0</b></div>
+        <div class="coin"><i class="fire">♥</i><b id="hudStreak">0</b></div>
+      </div>
+    </div>
+
+    <!-- アリーナ -->
+    <div class="arena" id="arena">
+      <svg id="mochiSvg" viewBox="0 24 200 226" role="img" aria-labelledby="mochiAlt">
+        <title id="mochiAlt">ホームに出すモチは、モチずかんから選べます</title>
+        <g id="mochiG"></g>
+      </svg>
+      <div class="toast" id="toast"></div>
+
+      <!-- モチずかんの入口。アリーナの右はしに立てかけてある本 -->
+      <button class="bookbtn" id="btnBook" aria-label="モチずかんを開く">
+        <svg viewBox="0 0 34 34" aria-hidden="true">
+          <path d="M5 6.5c4-1.6 8-1.6 12 .8v20.4c-4-2.4-8-2.4-12-.8Z"/>
+          <path d="M29 6.5c-4-1.6-8-1.6-12 .8v20.4c4-2.4 8-2.4 12-.8Z"/>
+          <path d="M17 7.3v20.4"/>
+        </svg>
+        <span class="bcount" id="bookCount">0</span>
+      </button>
+    </div>
+
+    <!-- きょうの定石をカードで並べる -->
+    <div class="panel">
+      <div class="ribbon out sm" id="ribDay">きょうの定石</div>
+      <div class="cardgrid" id="todayGrid"></div>
+    </div>
+
+    <button class="btn big" id="btnStart">くいずをとく</button>
+    <button class="btn sm lilac" id="btnToMovie">定石ムービー</button>
+    <button class="btn sm lilac" id="btnToSet">せってい</button>
+
+  </section>
+
+  <!-- ══════════ 出題 ══════════ -->
+  <section class="screen" id="s-quiz">
+    <div class="qbar">
+      <button class="iconbtn" id="btnQuit" aria-label="やめる">
+        <svg viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></svg>
+      </button>
+      <div class="out sm qtitle" id="qName">—</div>
+      <div class="lvl" style="width:auto;padding:2px 11px;height:44px">
+        <div><small>のこり</small><b class="num" id="qLeft">0</b></div>
+      </div>
+    </div>
+    <div class="xp"><i id="qBar" style="width:0%"></i><span id="qBarTxt">0 / 0</span></div>
+
+    <div class="turnpill" id="qTurn"><span class="d b"></span>黒の番 1手目</div>
+
+    <div class="boardframe">
+      <div class="files" id="files"></div>
+      <div class="ranks" id="ranks"></div>
+      <div class="boardin"><div class="board" id="board"></div></div>
+    </div>
+
+    <div class="msgbox" id="qMsg"><div class="s">次の一手をタップ</div></div>
+    <div class="qtoast" id="qToast">
+      <div class="qt-card">
+        <div class="qt-body" id="qtBody"></div>
+        <button class="btn sm" id="qtNext">つぎへ</button>
+      </div>
+    </div>
+
+    <div class="qactions">
+      <button class="btn sm lilac" id="btnReveal">こたえを見る</button>
+      <button class="btn sm" id="btnNext" style="display:none">つぎへ</button>
+    </div>
+  </section>
+
+  <!-- ══════════ 定石とうろく（どの定石をいつ出すか）══════════ -->
+  <section class="screen" id="s-reg">
+    <div class="qbar"><div class="out sm qtitle" style="padding-left:6px">定石とうろく</div></div>
+
+    <div class="panel field">
+      <div class="ribbon out sm">どの曜日に出す？</div>
+      <div class="days" id="dayPicker"></div>
+      <div class="rowbar">
+        <button class="btn sm" id="btnNew">＋ 新規定石</button>
+        <button class="btn sm lilac" id="btnSelMode">選択</button>
+      </div>
+      <div class="reglist" id="regList"></div>
+      <div class="rowbar" id="selBar" hidden>
+        <button class="btn sm pink" id="btnDel">登録から外す</button>
+        <button class="btn sm lilac" id="btnSelCancel">やめる</button>
+      </div>
+      <button class="btn sm lilac" id="btnUndo" disabled>もとにもどす</button>
+      <div class="hint"><b>行を押すと、その定石をいま解けます</b>（曜日に関係なく）。
+        鉛筆✎を押すと、その定石のせっていが開きます。<br>
+        ここに入っている定石が、その曜日に出題されます。<br>
+        外すとその曜日から消えます。自作の定石は、どの曜日にも無くなった時点で完全に消えます。</div>
+      <button class="btn sm lilac" id="btnAuto">収録定石を7曜日におまかせで配る</button>
+    </div>
+    <div style="height:6px"></div>
+
+    <!-- (4) F5始点メーカー -->
+    <div style="height:6px"></div>
+  </section>
+
+  <!-- ══════════ 新規定石 ══════════ -->
+  <section class="screen" id="s-new">
+    <div class="qbar">
+      <button class="iconbtn" id="btnNewBack" aria-label="もどる">
+        <svg viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></svg>
+      </button>
+      <div class="out sm qtitle">新規定石</div>
+    </div>
+
+    <div class="seg" id="segMode">
+      <button data-v="paste">はりつけ</button>
+      <button data-v="board">盤に打つ</button>
+      <button data-v="lib">えらぶ</button>
+    </div>
+
+    <!-- (1) 収録済みからえらぶ -->
+    <div class="panel field" id="modeLib">
+      <div class="ribbon out sm">収録ずみからえらぶ</div>
+      <div class="seg" id="segLevel">
+        <button data-v="基本形">みじかい</button>
+        <button data-v="分岐">ながい</button>
+        <button data-v="すべて">ぜんぶ</button>
+      </div>
+      <div class="tagbar" id="segTag"></div>
+      <div class="hint" id="libCount"></div>
+      <div class="checks" id="libList"></div>
+    </div>
+
+    <!-- (2) 棋譜をはりつけ -->
+    <div class="panel field" id="modePaste">
+      <div class="ribbon out sm">棋譜をはりつけ</div>
+      <input class="tin" id="pasteName" type="text" placeholder="定石の名前（例：わたしの虎）">
+      <textarea class="tin ta" id="pasteText" rows="3"
+        placeholder="f5d6c5f4e3c6d3f6e6d7"></textarea>
+      <div class="hint">大文字・空白・カンマ・URLに混ざっていても、手順の部分だけ拾います。
+        リンク先を読みに行くことはできないので、手順そのものが文字に入っている必要があります。</div>
+      <div class="rowbar">
+        <button class="btn sm pink" id="btnPastePaste">ペースト</button>
+        <button class="btn sm" id="btnPasteCheck">かくてい</button>
+      </div>
+      <div class="result" id="pasteResult" hidden></div>
+    </div>
+
+    <div class="panel field" id="f5maker">
+      <div class="ribbon out sm">F5始点メーカー</div>
+
+      <svg class="factory" viewBox="0 0 260 120" aria-hidden="true">
+        <!-- けむり -->
+        <g class="smoke" fill="#FFF3C4">
+          <circle cx="74" cy="30" r="9"/><circle cx="88" cy="18" r="7"/><circle cx="100" cy="9" r="5"/>
+        </g>
+        <!-- 建物 -->
+        <rect x="46" y="46" width="168" height="58" rx="12"
+              fill="#FFDCA6" stroke="#4B3A80" stroke-width="4"/>
+        <rect x="62" y="34" width="18" height="20" rx="5"
+              fill="#FFC2DC" stroke="#4B3A80" stroke-width="4"/>
+        <!-- 窓 -->
+        <circle cx="110" cy="75" r="13" fill="#BFE0FF" stroke="#4B3A80" stroke-width="4"/>
+        <circle cx="150" cy="75" r="13" fill="#CFF2D8" stroke="#4B3A80" stroke-width="4"/>
+        <!-- 入口と出口 -->
+        <rect x="8"  y="66" width="42" height="18" rx="8"
+              fill="#C9B6FF" stroke="#4B3A80" stroke-width="4"/>
+        <rect x="210" y="66" width="42" height="18" rx="8"
+              fill="#7FE6C4" stroke="#4B3A80" stroke-width="4"/>
+        <!-- 出てくる f5 の石 -->
+        <circle class="pop" cx="238" cy="52" r="10" fill="#FFF" stroke="#4B3A80" stroke-width="4"/>
+      </svg>
+
+      <div class="hint">初手が f5 でない棋譜を入れると、盤を回して <b>f5始点に直したもの</b>が出てきます。
+        盤の向きが変わるだけなので、手順の中身も強さも変わりません。</div>
+      <textarea class="tin ta" id="f5In" rows="3" placeholder="d3c5f6f3c4..."></textarea>
+      <div class="rowbar">
+        <button class="btn sm pink" id="btnF5Paste">ペースト</button>
+        <button class="btn sm lilac" id="btnF5Clear">クリア</button>
+      </div>
+      <button class="btn sm" id="btnF5Go">へんかんする</button>
+      <div class="result" id="f5Result" hidden></div>
+    </div>
+    <!-- (3) 盤に打って作る -->
+    <div class="panel field" id="modeBoard">
+      <div class="ribbon out sm">盤に打ってつくる</div>
+      <input class="tin" id="boardName" type="text" placeholder="定石の名前（例：じぶんのローズ）">
+      <div class="turnpill" id="nbTurn"><span class="d b"></span>くろの番　1手目</div>
+      <div class="boardframe">
+        <div class="files" id="nbFiles"></div>
+        <div class="ranks" id="nbRanks"></div>
+        <div class="boardin"><div class="board" id="nbBoard"></div></div>
+      </div>
+      <div class="seqline mono" id="nbSeq">まだ1手も打っていません</div>
+      <div class="rowbar">
+        <button class="btn sm lilac" id="nbUndo">1手もどす</button>
+        <button class="btn sm lilac" id="nbClear">ぜんぶ消す</button>
+      </div>
+      <button class="btn sm" id="nbSave">この手順でとうろく</button>
+      <div class="result" id="boardResult" hidden></div>
+    </div>
+    <div style="height:6px"></div>
+  </section>
+
+  <!-- ══════════ 定石ムービー ══════════
+       解かずに、進行をただ眺めるための画面。覚えるほどではないが
+       知っておきたい形を、盤の上で再生して見る。                      -->
+  <section class="screen" id="s-movie">
+    <div class="qbar">
+      <button class="iconbtn" id="btnMovieBack" aria-label="ホームへもどる">
+        <svg viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></svg>
+      </button>
+      <div class="out sm qtitle">定石ムービー</div>
+    </div>
+
+    <div class="panel field" id="mvPick">
+      <button class="ribbon out sm mv-toggle" id="mvPickToggle">どの定石を見る？</button>
+      <div class="tagbar" id="mvTag"></div>
+      <div class="hint" id="mvCount"></div>
+      <div class="checks mv-list" id="mvList"></div>
+    </div>
+
+    <div class="turnpill" id="mvTurn"><span class="d b"></span>定石をえらんでください</div>
+
+    <div class="boardframe">
+      <div class="files" id="mvFiles"></div>
+      <div class="ranks" id="mvRanks"></div>
+      <div class="boardin"><div class="board" id="mvBoard"></div></div>
+    </div>
+
+    <div class="rowbar">
+      <button class="btn sm lilac" id="mvPrev">◀ 1手</button>
+      <button class="btn sm" id="mvPlay">さいせい</button>
+      <button class="btn sm lilac" id="mvNext">1手 ▶</button>
+    </div>
+    <div class="seg" id="mvSpeed">
+      <button data-v="1400">ゆっくり</button>
+      <button data-v="800">ふつう</button>
+      <button data-v="420">はやい</button>
+    </div>
+    <div class="msgbox" id="mvMsg"><div class="s">上の一覧から定石をえらぶと、ここに手順が出ます</div></div>
+    <div style="height:6px"></div>
+  </section>
+
+  <!-- ══════════ せってい（アプリの動きかた）══════════ -->
+  <section class="screen" id="s-set">
+    <div class="qbar">
+      <button class="iconbtn" id="btnSetBack" aria-label="ホームへもどる">
+        <svg viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></svg>
+      </button>
+      <div class="out sm qtitle">せってい</div>
+    </div>
+
+    <div class="panel field">
+      <div class="ribbon out sm">テスト版です</div>
+      <div class="hint">ここはお試し用です。<b>記録は本番とは別に持っています</b>ので、
+        ここで解いても本番のきろくは変わりません。<br>
+        ホーム画面には追加できないようにしてあります。</div>
+    </div>
+
+    <div class="panel field">
+      <div class="ribbon out sm">きろく</div>
+      <div class="hint" id="resetHint">のべ正解 0問 ／ いまの姿 こもち</div>
+      <button class="btn sm pink" id="btnReset">きろくをリセット</button>
+    </div>
+
+    <div class="panel field">
+      <div class="ribbon out sm">バックアップ</div>
+      <div class="hint">きろくは、いま開いているアプリの中だけに残ります。
+        別の端末や別のリンクから開くと、空の状態から始まります。<br>
+        <b>うつしかた</b>　①書き出す　②コピー　③うつす先のアプリで ペースト　④読みこむ<br>
+        読みこんでも、いまのきろくは消えません。ふたつのきろくが1つになります。</div>
+      <textarea class="tin ta" id="bkText" rows="3"
+        placeholder="「書き出す」を押すと、ここに文字が出ます"></textarea>
+      <div class="rowbar">
+        <button class="btn sm" id="btnBkOut">書き出す</button>
+        <button class="btn sm pink" id="btnBkCopy">コピー</button>
+      </div>
+      <div class="rowbar">
+        <button class="btn sm pink" id="btnBkPaste">ペースト</button>
+        <button class="btn sm lilac" id="btnBkIn">読みこむ（足す）</button>
+      </div>
+      <div class="result" id="bkResult" hidden></div>
+    </div>
+    <div style="height:6px"></div>
+  </section>
+
+  <!-- ══════════ タブ ══════════ -->
+  <nav class="tabs"><div class="tabs-in">
+    <button class="tab" data-s="home" aria-selected="true">
+      <svg viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5"/><path d="M6.5 10v9h11v-9"/></svg>ホーム</button>
+    <button class="tab" data-s="quiz" aria-selected="false">
+      <svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="9" cy="9" r="2.2"/><circle cx="15" cy="15" r="2.2"/></svg>とく</button>
+    <button class="tab" data-s="reg" aria-selected="false">
+      <svg viewBox="0 0 24 24"><path d="M4 7.5 5.6 9l3-3.2"/><path d="M4 16 5.6 17.5l3-3.2"/><path d="M12 7h8M12 16h8"/></svg>定石とうろく</button>
+  </div></nav>
+
+  <!-- ══════════ 定石名の帯（出題の頭で流れる）══════════ -->
+  <div class="nameband" id="nameBand" hidden>
+    <div class="band">
+      <span class="s"></span>
+      <span class="t" id="bandTxt"></span>
+      <span class="s"></span>
+    </div>
+  </div>
+
+  <!-- ══════════ 定石ごとの設定 ══════════ -->
+  <div class="ask" id="jedit" hidden>
+    <div class="ask-card">
+      <div class="out sm ask-title">定石のせってい</div>
+
+      <div class="je-label">なまえ</div>
+      <input class="tin" id="jeName" type="text" maxlength="40">
+
+      <div class="je-label">何手目から出す？</div>
+      <div class="stepper">
+        <button class="iconbtn" id="jeMinus" aria-label="1手はやくする">
+          <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+        <span id="jeVal">初手から</span>
+        <button class="iconbtn" id="jePlus" aria-label="1手おそくする">
+          <svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></button>
+      </div>
+      <div class="je-label">どちらの番を答える？</div>
+      <div class="seg" id="jeSide">
+        <button data-v="both">りょうほう</button>
+        <button data-v="black"><span class="sd b"></span>くろ</button>
+        <button data-v="white"><span class="sd w"></span>しろ</button>
+      </div>
+
+      <div class="je-label">きふ（手順）</div>
+      <textarea class="tin ta" id="jeKifu" rows="2"
+        placeholder="f5 d6 c3 d3 c4 f4"></textarea>
+      <div class="rowbar">
+        <button class="btn sm lilac" id="jeKifuReset">もとの手順にもどす</button>
+      </div>
+
+      <div class="je-label">タグ（この定石をどのモチに数えるか）</div>
+      <div class="tagbar tagpick" id="jeTag"></div>
+
+      <div class="je-info" id="jeInfo"></div>
+
+      <div class="rowbar">
+        <button class="btn sm lilac" id="jeCancel">やめる</button>
+        <button class="btn sm" id="jeOk">きめる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ モチずかん ══════════ -->
+  <div class="ask" id="zukan" hidden>
+    <div class="ask-card zk-card">
+      <div class="out sm zk-title">モチずかん</div>
+      <div class="zk-scroll">
+        <div class="zk-sub">けいとうのモチ</div>
+        <div class="colgrid" id="colGrid"></div>
+        <div class="zk-sub">定石のモチ</div>
+        <div class="colgrid" id="colGridF"></div>
+      </div>
+      <div class="zk-count" id="colCount"></div>
+      <button class="btn sm lilac" id="zkClose">とじる</button>
+    </div>
+  </div>
+
+  <!-- ══════════ モチ一体ごとの紹介 ══════════ -->
+  <div class="ask" id="mochiInfo" hidden>
+    <div class="ask-card">
+      <svg class="mi-svg" id="miSvg" viewBox="0 24 200 226" aria-hidden="true"><g id="miG"></g></svg>
+      <div class="out sm mi-name" id="miName"></div>
+      <div class="mi-need" id="miNeed"></div>
+      <div class="mi-text" id="miChara"></div>
+      <div class="mi-note" id="miNote"></div>
+      <div class="mi-list" id="miList" hidden></div>
+      <button class="btn sm" id="miWear" hidden>ホームに出す</button>
+      <button class="btn sm lilac" id="miClose">とじる</button>
+    </div>
+  </div>
+
+  <!-- ══════════ たしかめダイアログ ══════════ -->
+  <div class="ask" id="ask" hidden>
+    <div class="ask-card">
+      <div class="out sm ask-title" id="askTitle">たしかめ</div>
+      <div class="ask-body" id="askBody"></div>
+      <div class="rowbar">
+        <button class="btn sm lilac" id="askNo">やめる</button>
+        <button class="btn sm pink" id="askOk">はい</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ 進化演出 ══════════ -->
+  <div class="evo" id="evo" hidden>
+    <div class="evo-card">
+      <div class="evo-stage">
+        <div class="evo-rays" id="evoRays"></div>
+        <svg class="evo-svg" id="evoSvg" viewBox="0 24 200 226" aria-hidden="true">
+          <g id="evoG"></g>
+        </svg>
+        <div class="evo-burst" id="evoBurst"></div>
+      </div>
+      <div class="evo-txt out sm" id="evoTxt">あたらしいモチが かくれている……</div>
+      <button class="btn" id="evoOk" style="display:none">やったー！</button>
+    </div>
+  </div>
+  <div class="evo-flash" id="evoFlash"></div>
+</div>
+
+<script>
+"use strict";
+/* =========================================================================
+   1. オセロのルール
+   盤は 8x8 の配列。0=空 / 1=黒 / 2=白。
+   ========================================================================= */
+const DIRS=[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+
+function startBoard(){
+  const b=Array.from({length:8},()=>Array(8).fill(0));
+  b[3][3]=2; b[3][4]=1;   // d4=白 e4=黒
+  b[4][3]=1; b[4][4]=2;   // d5=黒 e5=白
+  return b;
+}
+/** (r,c) に p が打ったとき裏返る石。空配列＝そこには打てない */
+function flips(b,r,c,p){
+  if(b[r][c]!==0) return [];
+  const o=3-p, out=[];
+  for(const [dr,dc] of DIRS){
+    const line=[]; let rr=r+dr, cc=c+dc;
+    while(rr>=0&&rr<8&&cc>=0&&cc<8&&b[rr][cc]===o){ line.push([rr,cc]); rr+=dr; cc+=dc; }
+    if(line.length&&rr>=0&&rr<8&&cc>=0&&cc<8&&b[rr][cc]===p) out.push(...line);
+  }
+  return out;
+}
+function hasMove(b,p){
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++) if(flips(b,r,c,p).length) return true;
+  return false;
+}
+const toRC = m => [parseInt(m[1],10)-1, m.charCodeAt(0)-97];   // "f5" → [4,5]
+const toSq = (r,c) => String.fromCharCode(97+c)+(r+1);
+
+/** 手順を最初から再生して、各手の盤面と手番を作っておく */
+function replay(moves){
+  let b=startBoard(), p=1;
+  const states=[];
+  for(const m of moves){
+    if(!hasMove(b,p)) p=3-p;                       // パス
+    states.push({board:b.map(r=>r.slice()), player:p, move:m});
+    const [r,c]=toRC(m), f=flips(b,r,c,p);
+    b[r][c]=p; for(const [rr,cc] of f) b[rr][cc]=p;
+    p=3-p;
+  }
+  states.push({board:b.map(r=>r.slice()), player:p, move:null});
+  return states;
+}
+
+/* =========================================================================
+   2. 定石データ
+   手順は bassy84.net の棋譜表記から。全ての手を上のルールで再生して
+   合法手であることを確認済み。
+   ========================================================================= */
+const JOSEKI=[
+ {id:"rose-basic",  n:"ローズ定石・基本形",              lv:"基本形", cat:"ウサギ系",
+  s:"f5d6c5f4e3c6d3f6e6d7", note:"白の縦取りに黒c5から入る最頻出の形。11手目で三大ローズに分岐する。"},
+ {id:"tora-basic",  n:"虎定石・基本形",                  lv:"基本形", cat:"虎系",
+  s:"f5d6c3d3c4f4c5b3", note:"黒3手目c3が虎。ここからローズビル・コンポス・ノーカンに分かれる。"},
+ {id:"ushi-a",      n:"飛び出し牛・A（白4手目d6）",       lv:"基本形", cat:"牛系",
+  s:"f5f6e6d6e7g5", note:"白の斜め取りf6に対する形。次の黒7手目が岩崎流への分かれ道。"},
+ {id:"ushi-b",      n:"飛び出し牛・B（白4手目f4）",       lv:"基本形", cat:"牛系",
+  s:"f5f6e6f4g5e7", note:"同じく牛系。白4手目がf4になった変化で、A系統とは合流しない。"},
+ {id:"rose-hazushi",n:"ローズ外し（白8手目g5）",          lv:"基本形", cat:"ウサギ系",
+  s:"f5d6c5f4e3c6f3g5", note:"黒7手目がローズ本線のd3ではなくf3。白は8手目g5が正解。"},
+ {id:"usagi-d3",    n:"ウサギ・9手目d3型",               lv:"基本形", cat:"ウサギ系",
+  s:"f5d6c5f4e3f6f3c4d3", note:"黒6手目でf6と変化した形。9手目のd3を落としやすい。"},
+
+ {id:"s-rose",      n:"シャープローズ・基本形",           lv:"分岐", cat:"ウサギ系",
+  s:"f5d6c5f4e3c6d3f6e6d7g3c4", note:"黒11手目g3。斜め＝Sharpと覚える。白12手目はc4がほぼ一択。"},
+ {id:"f-rose",      n:"フラットローズ・基本形",           lv:"分岐", cat:"ウサギ系",
+  s:"f5d6c5f4e3c6d3f6e6d7g4c4", note:"黒11手目g4。横＝Flat。白12手目はc4のほかg3も候補。"},
+ {id:"tezuka",      n:"手塚システム・基本形",             lv:"分岐", cat:"ウサギ系",
+  s:"f5d6c5f4e3c6d3f6e6d7e7", note:"黒11手目e7。互いに中割りしたのち黒が下辺に下ろす形が多い。"},
+ {id:"s-rose-e7",   n:"Sローズ・13-e7 兜割り型",         lv:"分岐", cat:"ウサギ系",
+  s:"f5d6c5f4e3c6d3f6e6d7g3c4e7c3", note:"シャープローズから黒13手目e7。"},
+ {id:"s-rose-b4",   n:"Sローズ・13-b4 爲則ローズ",       lv:"分岐", cat:"ウサギ系",
+  s:"f5d6c5f4e3c6d3f6e6d7g3c4b4b3b5a4a2a3a5", note:"13手目の最善型。終盤a2のC打ちまで一本道。"},
+ {id:"s-rose-15g5", n:"Sローズ・15-g5 爲則ローズVer3",   lv:"分岐", cat:"ウサギ系",
+  s:"f5d6c5f4e3c6d3f6e6d7g3c4b4b3g5c3b5a5a4a3b6a6", note:"爲則ローズの15手目変化。左辺を大きく取り合う。"},
+ {id:"s-rose-g6",   n:"Sローズ・13-g6 ローテーション型", lv:"分岐", cat:"ウサギ系",
+  s:"f5d6c5f4e3c6d3f6e6d7g3c4g6c3f7d2e7f2c8f3c7h3b6g4b5", note:"互いに回転するように打ち合う長い一本道。"},
+ {id:"s-rose-g5",   n:"Sローズ・13-g5 ローテーション型", lv:"分岐", cat:"ウサギ系",
+  s:"f5d6c5f4e3c6d3f6e6d7g3c4g5c3f7g6e7e2c8f2c7f3b6", note:"13手目g5のローテーション。g6型とは別の形になる。"},
+ {id:"f-rose-g5",   n:"Fローズ・13-g5 ローテーション型", lv:"分岐", cat:"ウサギ系",
+  s:"f5d6c5f4e3c6d3f6e6d7g4c4g5c3f7d2e7f2c8f3c7d8e8g3", note:"フラットローズからのローテーション型。"},
+ {id:"iwasaki-a",   n:"岩崎流・A系統",                   lv:"分岐", cat:"牛系",
+  s:"f5f6e6d6e7g5g4f7d7e8c4f4", note:"飛び出し牛Aから黒7手目g4。11手目c4と13手目を落としやすい。"},
+ {id:"iwasaki-b",   n:"岩崎流・B系統",                   lv:"分岐", cat:"牛系",
+  s:"f5f6e6f4g5e7d7g6g4h6e3c5", note:"飛び出し牛Bから黒7手目d7。A系統とは合流しないので別に覚える。"},
+ {id:"nousagi-c5",  n:"野うさぎ・白6手目c5型",           lv:"分岐", cat:"ウサギ系",
+  s:"f5d6c6f4e6c5b4b5c4b6a5d7a6e7", note:"黒3手目でいきなりc6と出る変化。最善ではないが打ちやすい。"},
+
+ // ── 白6手目の変化。ここまで同じ局面から3方向に分かれる ──
+ {id:"tamaya",      n:"玉家流（白6手目c4）",             lv:"分岐", cat:"ウサギ系",
+  s:"f5d6c5f4e3c4e6c6d3f3g4h5h3c3d7e8c8d8f8g3",
+  note:"別名クロスうさぎ。ローズを避ける早い変化で、頻度は低いぶん対策している人も少ない。"},
+ {id:"yamatohisa",  n:"大和久流（白6手目f6）",           lv:"分岐", cat:"ウサギ系",
+  s:"f5d6c5f4e3f6f3c4d3e6c3f2g3e2g4c2",
+  note:"変化手のf6は開放度が大きく白やや不利とされる。竹田流・邪気流と同じ枝にある。"},
+ {id:"mimura",      n:"三村流（白6手目d3）",             lv:"分岐", cat:"ウサギ系",
+  s:"f5d6c5f4e3d3e6g5c4c3d2f6c2",
+  note:"玉家流・大和久流と同じ分かれ道にある兄弟の変化。"},
+
+ /* ここから下は bassy84.net「オセロ･リバーシの勝ち方、必勝法」の定石一覧から
+    手順を写したもの。全手が打てる手かどうかは、読み込み時に自動でたしかめている。 */
+ {id:"bs-banana", n:"バナナ定石", lv:"分岐", cat:"とら系",
+  s:"f5d6c3d3c4f4c5b4b3c2d7c6e6b5a5", note:"白の縦取り（d6）に黒c3。変化が多く、上級者に好まれる。"},
+ {id:"bs-banana9-b5", n:"バナナ定石・9-b5変化型", lv:"分岐", cat:"とら系",
+  s:"f5d6c3d3c4f4c5b4b5c6f3e6e3g6f6g5d7", note:"白の縦取り（d6）に黒c3。変化が多く、上級者に好まれる。"},
+ {id:"bs-basirisuku", n:"バシリスク大量取り", lv:"基本形", cat:"うし系",
+  s:"f5f6e6f4g6c5g4g5f3e3", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-bat-8-f3", n:"こうもり定石 8-f3変化型", lv:"分岐", cat:"うし系",
+  s:"f5f6e6f4e3c5g5f3g6e7d3g4f2g3h5h3h4h6c4h2d6", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-bat", n:"こうもり定石・基本形", lv:"基本形", cat:"うし系",
+  s:"f5f6e6f4e3c5g5g3", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-chicken-14-a3", n:"酉フック 14-a3型", lv:"分岐", cat:"とら系",
+  s:"f5d6c3d3c4f4c5b3c2e3d2c6b4a3g3g4f3c1b5a4a6d1e2f2", note:"白の縦取り（d6）に黒c3。変化が多く、上級者に好まれる。"},
+ {id:"bs-chicken-14-a4", n:"酉ストレート 14-a4型", lv:"分岐", cat:"とら系",
+  s:"f5d6c3d3c4f4c5b3c2e3d2c6b4a4b5b6d7e7", note:"白の縦取り（d6）に黒c3。変化が多く、上級者に好まれる。"},
+ {id:"bs-chicken-14-b5", n:"酉アッパー 14-b5型", lv:"分岐", cat:"とら系",
+  s:"f5d6c3d3c4f4c5b3c2e3d2c6b4b5f2e6f3c1a3a4a5", note:"白の縦取り（d6）に黒c3。変化が多く、上級者に好まれる。"},
+ {id:"bs-cobra-7-f3", n:"コブラ定石 7-f3型", lv:"分岐", cat:"うし系",
+  s:"f5f6e6f4g6c6f3g5d6e3c5f7g4e7g3d7", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-cobra-7-g5", n:"コブラ定石 7-g5型", lv:"分岐", cat:"うし系",
+  s:"f5f6e6f4g6c6g5d6c5f7d7e7f8b6e8c4g4", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-f-rose", n:"フラットローズ・本線（21手）", lv:"基本形", cat:"うさぎ系",
+  s:"f5d6c5f4e3c6d3f6e6d7g4c4g6g5e7f8f7h6h5c3h7", note:"白の縦取り（d6）に黒c5。いちばん多い系統。"},
+ {id:"bs-f-rose15-b4", n:"フラットローズ定石・15-b4 ジーローズ", lv:"分岐", cat:"うさぎ系",
+  s:"f5d6c5f4e3c6d3f6e6d7g4c4g5c3b4b3b5a5a4a3b6a6", note:"白の縦取り（d6）に黒c5。いちばん多い系統。"},
+ {id:"bs-fjt-11-c6", n:"FJT定石・11-c6変化型", lv:"分岐", cat:"とら系",
+  s:"f5d6c3d3c4f4c5b3c2b4c6d2e6b5", note:"白の縦取り（d6）に黒c3。変化が多く、上級者に好まれる。"},
+ {id:"bs-fjt-14-g4", n:"FJT定石・14-g4型", lv:"分岐", cat:"とら系",
+  s:"f5d6c3d3c4f4c5b3c2b4e3e6c6g4f6b6g6g5f3d7f7", note:"白の縦取り（d6）に黒c3。変化が多く、上級者に好まれる。"},
+ {id:"bs-fjt", n:"FJT定石", lv:"分岐", cat:"とら系",
+  s:"f5d6c3d3c4f4c5b3c2b4e3e6c6f6a5a4b5a6d7c7e7", note:"白の縦取り（d6）に黒c3。変化が多く、上級者に好まれる。"},
+ {id:"bs-hituzi-12-e7", n:"羊定石 12-e7変化型", lv:"分岐", cat:"ねこ系",
+  s:"f5d6c4d3e6f4e3f3c6f6g5e7d7g6g3g4", note:"白の縦取り（d6）に黒c4。猫・羊・燕はここから分かれる。"},
+ {id:"bs-hituzi-saizen", n:"羊定石・最善型", lv:"分岐", cat:"ねこ系",
+  s:"f5d6c4d3e6f4e3f3c6f6g5g6c3h6g4h5h3c5", note:"白の縦取り（d6）に黒c4。猫・羊・燕はここから分かれる。"},
+ {id:"bs-hituzi", n:"羊定石・基本形", lv:"基本形", cat:"ねこ系",
+  s:"f5d6c4d3e6f4e3f3", note:"白の縦取り（d6）に黒c4。猫・羊・燕はここから分かれる。"},
+ {id:"bs-hokurikubuffalo", n:"北陸バッファロー・基本形", lv:"基本形", cat:"うし系",
+  s:"f5f6e6f4c3c4d3", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-kaisokusen", n:"快速船・基礎形", lv:"分岐", cat:"うし系",
+  s:"f5f6e6f4e3c5c4e7c6e2f3f2", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-kingyo-11-b4", n:"金魚定石・りと虎", lv:"分岐", cat:"とら系",
+  s:"f5d6c3d3c4f4c5b3c2e6b4f3e3e2f6d2g4b6", note:"白の縦取り（d6）に黒c3。変化が多く、上級者に好まれる。"},
+ {id:"bs-kingyo", n:"金魚定石", lv:"分岐", cat:"とら系",
+  s:"f5d6c3d3c4f4c5b3c2e6c6b4b5d2e3a6c1b6f3f6f7e2", note:"白の縦取り（d6）に黒c3。変化が多く、上級者に好まれる。"},
+ {id:"bs-makotora", n:"まこ虎", lv:"分岐", cat:"とら系",
+  s:"f5d6c3d3c4f4c5b5b4b3c2f6g4e3e6c6", note:"白の縦取り（d6）に黒c3。変化が多く、上級者に好まれる。"},
+ {id:"bs-mamusi", n:"マムシ定石・基本形", lv:"基本形", cat:"うし系",
+  s:"f5f6e6f4g6c5g4g5h4", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-neko-saizen", n:"猫定石・最善型", lv:"分岐", cat:"ねこ系",
+  s:"f5d6c4d3c5f4e3f3e2c6e6f6d7c8", note:"白の縦取り（d6）に黒c4。猫・羊・燕はここから分かれる。"},
+ {id:"bs-neko-sakaguti", n:"猫定石・坂口流", lv:"分岐", cat:"ねこ系",
+  s:"f5d6c4d3c5f4e3f3c2c6e6d2g4b6b5c3", note:"白の縦取り（d6）に黒c4。猫・羊・燕はここから分かれる。"},
+ {id:"bs-neko", n:"猫定石・基本形", lv:"基本形", cat:"ねこ系",
+  s:"f5d6c4d3c5f4", note:"白の縦取り（d6）に黒c4。猫・羊・燕はここから分かれる。"},
+ {id:"bs-nezumi-4-f2", n:"ネズミ定石 4-f2変化型（旅チュー）", lv:"分岐", cat:"ねずみ系",
+  s:"f5f4e3f2e2f6d3c4f3e1f1g1e6c5c6d6", note:"白の並び取り（f4）。打つ人は少ないが、研究されると手強い。"},
+ {id:"bs-nezumi-saizen", n:"ネズミ定石・最善型", lv:"分岐", cat:"ねずみ系",
+  s:"f5f4e3f6d3c5d6c4e6c7d7c6g5g3f3d2c2e7", note:"白の並び取り（f4）。打つ人は少ないが、研究されると手強い。"},
+ {id:"bs-noitigo", n:"野いちご定石", lv:"分岐", cat:"うし系",
+  s:"f5f6e6f4g5e7f7d6f3g6d8h5e3d7c3d3c4c5", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-rakko", n:"ラッコ定石", lv:"分岐", cat:"ねこ系",
+  s:"f5d6c4g5f6f4f3d3c3g6e3e6c5e2f2c6d7", note:"白の縦取り（d6）に黒c4。猫・羊・燕はここから分かれる。"},
+ {id:"bs-rocket-6-f3", n:"ロケット定石 6-f3変化型", lv:"分岐", cat:"うし系",
+  s:"f5f6e6f4g3f3g5g6g4h3e3f2d3d6f1h6", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-rocket-saizen", n:"ロケット定石・最善型", lv:"分岐", cat:"うし系",
+  s:"f5f6e6f4g3d6e3g4c5c4c3d3e2", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-s-tamenorirose-15-b6", n:"Sローズ 15-b6型（爲則ローズVer2）", lv:"分岐", cat:"うさぎ系",
+  s:"f5d6c5f4e3c6d3f6e6d7g3c4b4b3b6c3b5g4", note:"白の縦取り（d6）に黒c5。いちばん多い系統。"},
+ {id:"bs-saizen-9-b5", n:"カヌー定石・黒b5型", lv:"分岐", cat:"うし系",
+  s:"f5f6e6f4e3c5c4d6b5d3c3e2f2c2f1b4", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-saizen-9-b6", n:"カヌー定石・黒b6型", lv:"分岐", cat:"うし系",
+  s:"f5f6e6f4e3c5c4d6b6b5c6d7c7a6f7e7e8", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-saizen-9-c6", n:"カヌー定石・黒c6型", lv:"分岐", cat:"うし系",
+  s:"f5f6e6f4e3c5c4d6c6b5d7e7b6c8a6b3c3f3g3", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-sensya", n:"戦車定石", lv:"基本形", cat:"うし系",
+  s:"f5f6e6f4e3c5c6d6e7f7", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-sunahebi-8-g4", n:"砂ヘビ・8-g4変化型", lv:"分岐", cat:"うし系",
+  s:"f5f6e6f4g6c5f3g4h5h4h3g5e3d6c3e7c4h6h7", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-sunahebi-8-g5", n:"砂ヘビ・8-g5変化型", lv:"分岐", cat:"うし系",
+  s:"f5f6e6f4g6c5f3g5d6e3h5g3c4c3d3c6g4", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-sunahebi", n:"砂ヘビ・基本形", lv:"基本形", cat:"うし系",
+  s:"f5f6e6f4g6c5f3", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-swallow-12-f3", n:"燕定石 12-f3型", lv:"分岐", cat:"ねこ系",
+  s:"f5d6c4g5c6c5d7d3b4c3e3f3e2c2g4", note:"白の縦取り（d6）に黒c4。猫・羊・燕はここから分かれる。"},
+ {id:"bs-swallow", n:"燕定石", lv:"分岐", cat:"ねこ系",
+  s:"f5d6c4g5c6c5d7d3b4c3e3b5a4", note:"白の縦取り（d6）に黒c4。猫・羊・燕はここから分かれる。"},
+ {id:"bs-tairyou", n:"白大量取り", lv:"基本形", cat:"うし系",
+  s:"f5f6e6f4e3d6", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-tanidabuffalo-8-c5", n:"谷田バッファロー 8-c5変化型", lv:"分岐", cat:"うし系",
+  s:"f5f6e6f4c3d6f3c5g4h3c6c4h5", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-tanidabuffalo", n:"谷田バッファロー・基本形", lv:"基本形", cat:"うし系",
+  s:"f5f6e6f4c3d6f3", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-tanidabuffalo8-e3", n:"谷田バッファロー 8-e3変化型", lv:"分岐", cat:"うし系",
+  s:"f5f6e6f4c3d6f3e3d3c6g4h3h5e2d2c4b4c2", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-tanuki-saizen", n:"狸定石・最善型", lv:"分岐", cat:"うし系",
+  s:"f5f6e6f4g4e7f7g5e3d3h5", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-tinbotusen", n:"沈没船", lv:"分岐", cat:"うし系",
+  s:"f5f6e6f4e3c5c4d7c6e2f3d3c3d2", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-torahenka", n:"猫→虎定石化", lv:"基本形", cat:"ねこ系",
+  s:"f5d6c4d3c3f4", note:"白の縦取り（d6）に黒c4。猫・羊・燕はここから分かれる。"},
+ {id:"bs-tutinoko", n:"つちのこ定石・基本形", lv:"基本形", cat:"うし系",
+  s:"f5f6e6f4g6d6", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-urabat-8-d6-9-d3", n:"裏こうもり・8-g6→9-d3型", lv:"分岐", cat:"うし系",
+  s:"f5f6e6f4g5e7e3g6d3c5d6c6f7c4e8", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-urabat-8-f3", n:"裏こうもり 8-f3型", lv:"分岐", cat:"うし系",
+  s:"f5f6e6f4g5e7e3f3c5c4g3c6d6d7e8d8", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-urabat-8-g4", n:"裏こうもり 8-g4変化型", lv:"分岐", cat:"うし系",
+  s:"f5f6e6f4g5e7e3g4f3d3c3d6g6h5c4", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-urahebi-saizen", n:"裏ヘビ定石・最善形", lv:"分岐", cat:"うし系",
+  s:"f5f6e6f4d3d6f3e3g5g6g4h3h4h5e7", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-uratairyou-8-g4", n:"白裏大量 8-g4型", lv:"分岐", cat:"うし系",
+  s:"f5f6e6f4g5d6e7g4f3h5e3d3c7f7g6e8h6h7", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-uratairyou-8-g6", n:"白裏大量 8-g6型", lv:"分岐", cat:"うし系",
+  s:"f5f6e6f4g5d6e7g6c5c4f3", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-uratanuki-saizen", n:"裏狸定石・最善型", lv:"分岐", cat:"うし系",
+  s:"f5f6e6f4f3c5c6e3g5e7d7g6g4h5", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-urayotto", n:"裏ヨット定石", lv:"分岐", cat:"うし系",
+  s:"f5f6e6f4g5e7f7h5e8c5g4h4e3d6f3", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-usikihon-8-d3", n:"丸岡流", lv:"分岐", cat:"うし系",
+  s:"f5f6e6f4e3c5c4d3f3e2g4g5f2", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-yotto", n:"ヨット定石", lv:"分岐", cat:"うし系",
+  s:"f5f6e6f4e3c5c4e7b5e2f3f2g5g4g6d6h3", note:"白の斜め取り（f6）。黒5手目で行き先が大きく変わる。"},
+ {id:"bs-nocat", n:"No Cat・基本形", lv:"基本形", cat:"ねこ系",
+  s:"f5d6c4g5", note:"白から猫定石をさせない外し。4手と短いが、これも一つの選択。"},
+ {id:"bs-bousou", n:"暴走牛定石", lv:"基本形", cat:"うし系",
+  s:"f5f6e6f4g7", note:"いきなりX打ちする、評価のよくない進行。研究している人は手強い。"},
+ {id:"bs-nezumi-kihon", n:"ネズミ定石・基本形", lv:"基本形", cat:"ねずみ系",
+  s:"f5f4e3f6d3c5", note:"白の並び取り（f4）。打つ人は少ないが、研究されると手強い。"},
+
+ /* ここから下は note「オセロクエスト 戦法一覧」（mjulin さん）から手順を写したもの。
+    棋譜はその定石に行きつくまでの一例なので短め。評価値と出現頻度(☆)は記事のまま。 */
+ {id:"nq-1", n:"Wing Variation", lv:"基本形", cat:"うし系",
+  s:"f5f6d3f4", note:"悪手に悪手で返している、見ることはない　B-3 ☆"},
+ {id:"nq-2", n:"Semi-Wing Variation", lv:"基本形", cat:"うし系",
+  s:"f5f6c4f4", note:"同上　B-5 ☆"},
+ {id:"nq-3", n:"バッファロー定石", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6c3", note:"マイナーだがたまに打たれると困る　B-2 ☆☆☆"},
+ {id:"nq-4", n:"北陸バッファロー", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6c3d3", note:"互角に戻る　±0 ☆☆"},
+ {id:"nq-5", n:"丸岡バッファロー", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6c3g4c6", note:"白が最善でついていった　B-2 ☆☆"},
+ {id:"nq-6", n:"谷田バッファロー", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6c3f4c6d3e3d2", note:"大量取りの見た目がやばすぎるがこれも白最善　B-2 ☆☆"},
+ {id:"nq-7", n:"裏蛇定石", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6c4", note:"滅多に見ない、蛇定石の裏なので裏蛇定石　B-4 ☆"},
+ {id:"nq-8", n:"裏狸定石", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6c6", note:"狸定石の裏なので裏狸定石　B-4 ☆"},
+ {id:"nq-9", n:"ロケット定石", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6c7", note:"ヒラメともいうらしい、黒はラインを通され続けて苦しい　B-4 ☆"},
+ {id:"nq-10", n:"Lollipop", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6c7f4", note:"対ロケット最善、定石名納得ランキング上位　B-4 ☆"},
+ {id:"nq-11", n:"Hamilton", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6c7c6d7", note:"悪手に悪手で返している、定石登録ミス？　B-7 ☆"},
+ {id:"nq-12", n:"狸定石", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6d7", note:"右下の白石が狸のヘソだろうか、最善で打つと序盤にX打ちになる　B-4 ☆"},
+ {id:"nq-13", n:"暴走牛", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6g7", note:"舐めプといえばこの定石、これ打たれて負けると発狂　B-20 ☆"},
+ {id:"nq-14", n:"牛定石", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6c5", note:"もっともメジャーで無難な変化、どこが牛？"},
+ {id:"nq-15", n:"白大量取り（分かれ道）", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6c5f4", note:"少なく取るオセロのセオリーを無視した定石、しかし最善　±0 ☆☆☆☆"},
+ {id:"nq-16", n:"戦車定石（分かれ道）", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6c5f4f3e3g5", note:"確かに戦車っぽく見える、強い人が使ってるイメージ"},
+ {id:"nq-17", n:"Rose-v-Toth", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6c5e3d3", note:"ライン通しの好手、斜めで一番よく見る最善　±0 ☆☆☆☆"},
+ {id:"nq-18", n:"Tanida", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6c5e3d3g5", note:"斜めでは白は最善よりもこの変化の方が圧倒的に多い印象　B+2 ☆☆☆☆"},
+ {id:"nq-19", n:"Aircraft/Feldborg (飛行機)", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6c5e3d3g5d7", note:"黒からの変化　B-4 ☆☆☆"},
+ {id:"nq-20", n:"快速船", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6c5e3d3g5f3b5", note:"斜めで一番よく見る変化　B+2 ☆☆☆"},
+ {id:"nq-21", n:"ヨット定石（分かれ道）", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6c5e3d3g5e2b5", note:"定石名の納得度ランキング1位　B-2 ☆☆"},
+ {id:"nq-22", n:"沈没船（分かれ道）", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6c5e3d3g4", note:"強い人が使ってそうなイメージ　B+2 ☆☆"},
+ {id:"nq-23", n:"Landau", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6c5e3d3c4c3", note:"白の変化に対して黒も変化　±0 ☆☆"},
+ {id:"nq-24", n:"Maruoka", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6c5e3d3c4c6b5", note:"白の変化に対して黒最善　B+2 ☆☆"},
+ {id:"nq-25", n:"こうもり定石", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6c5e3e7", note:"黒からの優秀な変化、レート2000付近でよく見る　B-2 ☆☆☆☆"},
+ {id:"nq-26", n:"Bat (Kling Alternative)", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6c5e3e7f4f7", note:"白から変化、黒に綺麗な中割りを打たせるので抵抗がある　B+2 ☆☆"},
+ {id:"nq-27", n:"Melnikov/Bat (Piau1)", lv:"分岐", cat:"うし系",
+  s:"f5f6e6d6c5e3e7c7d7c6d3", note:"コウモリ最善、最後に大量取りでラインを通す　B-2 ☆☆"},
+ {id:"nq-28", n:"こうもり定石(Piau2)", lv:"分岐", cat:"うし系",
+  s:"f5f6e6d6c5e3e7c7d7c6f7", note:"これもコウモリ最善　B-2 ☆☆"},
+ {id:"nq-29", n:"Bat (Kling Continuation)", lv:"分岐", cat:"うし系",
+  s:"f5f6e6d6c5e3e7c7d7c6f7c4b6d8e8f8b5", note:"Kling Continuationとあるが別に最善ではない　B-6 ☆"},
+ {id:"nq-30", n:"飛び出し牛 (闘牛定石)", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6e7", note:"斜めに対する黒最強の対応、間違えるとすぐに詰む、闘牛定石とも　±0 ☆☆☆☆☆"},
+ {id:"nq-31", n:"白裏大量", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6e7f4", note:"表と違って別に白最善ではない　B+2 ☆☆"},
+ {id:"nq-32", n:"裏こうもり", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6e7g5c5", note:"飛び出し最善、ライン通し合戦　±0 ☆☆☆"},
+ {id:"nq-33", n:"岩崎流", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6e7g5g4", note:"黒からの変化　B-2 ☆☆"},
+ {id:"nq-34", n:"野いちご", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6e7g5g6f4", note:"これも最善、間違えるとすぐ詰むから怖い　±0 ☆☆☆"},
+ {id:"nq-35", n:"三村流Ⅱ", lv:"分岐", cat:"うし系",
+  s:"f5f6e6d6e7g5g6e3c5c6d3c4b3", note:"大量取り、かつては定石だったらしいが普通に悪手と判明　B-14 ☆"},
+ {id:"nq-36", n:"ヘビ定石", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6f7", note:"黒石がヘビだろうか、これも詰みやすい定石　B-2 ☆☆☆"},
+ {id:"nq-37", n:"コブラ定石", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6f7f3", note:"白から変化、中割りの余地を残したが黒も種が残っている　±0 ☆☆"},
+ {id:"nq-38", n:"つちのこ", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6f7f4", note:"白から変化、大量取り　±0 ☆☆"},
+ {id:"nq-39", n:"砂ヘビ", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6f7e3c6", note:"最善、壁を作るがいずれ手を出してもらえる算段　B-2 ☆☆"},
+ {id:"nq-40", n:"マムシ", lv:"基本形", cat:"うし系",
+  s:"f5f6e6d6f7e3d7e7d8", note:"最善、詰みへの殺意が高そう　B-2 ☆☆"},
+ {id:"nq-41", n:"バジリスク定石 大量取り", lv:"分岐", cat:"うし系",
+  s:"f5f6e6d6f7e3d7e7c6c5d3", note:"最善、綺麗にラインが通っていて気持ちいい　B-2 ☆☆"},
+ {id:"nq-43", n:"鼠定石", lv:"基本形", cat:"ねずみ系",
+  s:"f5f4e3f6d3", note:"並行取りで多い進行、黒は自然な手を積み重ねるだけで良くなりやすい　B+6 ☆"},
+ {id:"nq-46", n:"虎系犬素", lv:"基本形", cat:"とら系",
+  s:"f5d6c3f3", note:"次に黒d3と打つと犬定石になるが、名前は出て来ない　B+4 ☆☆"},
+ {id:"nq-47", n:"ミサイル定石", lv:"基本形", cat:"とら系",
+  s:"f5d6c3g5", note:"物騒な形と名前である、次のc6がぴったり　B+5 ☆"},
+ {id:"nq-48", n:"龍定石", lv:"基本形", cat:"とら系",
+  s:"f5d6c3f4", note:"黒が次にf6と打つと龍定石になる、変わった変化が多い　B+4 ☆☆☆☆"},
+ {id:"nq-49", n:"風神定石", lv:"基本形", cat:"とら系",
+  s:"f5d6c3f4f6d3f3b3", note:"やばい形の黒最善進行、まだ見ぬ手筋が大量に眠っていて面白い　B+4 ☆☆☆"},
+ {id:"nq-50", n:"虎定石", lv:"基本形", cat:"とら系",
+  s:"f5d6c3d3c4", note:"基本の形、主にStephenson派と虎大量派に分かれる"},
+ {id:"nq-51", n:"イエス流", lv:"基本形", cat:"とら系",
+  s:"f5d6c3d3c4b3", note:"初見殺し性能高め、これを大会で打ってた選手の風貌から名付けたらしい　B+4 ☆☆"},
+ {id:"nq-52", n:"Aubrey (Feldborg)", lv:"基本形", cat:"とら系",
+  s:"f5d6c3d3c4b3d2f4", note:"悪手に悪手で返している、おそらく古い定石　B+2 ☆"},
+ {id:"nq-53", n:"Berg Tiger", lv:"基本形", cat:"とら系",
+  s:"f5d6c3d3c4b5", note:"白からの変化、あまり見ない　B+2 ☆☆"},
+ {id:"nq-54", n:"ブライトウェル", lv:"基本形", cat:"とら系",
+  s:"f5d6c3d3c4f4e3", note:"黒から変化、白からの中割りがわかりやすい、その後の手が初見殺し　B-4 ☆☆"},
+ {id:"nq-55", n:"Leader's Tiger", lv:"基本形", cat:"とら系",
+  s:"f5d6c3d3c4f4e6", note:"黒から変化、互いに手が広くなるイメージ　B-4 ☆☆☆"},
+ {id:"nq-56", n:"虎大量", lv:"基本形", cat:"とら系",
+  s:"f5d6c3d3c4f4c5", note:"虎系二大分岐その1、白からの無数の仕掛けをかいくぐる必要がある　±0 ☆☆☆☆"},
+ {id:"nq-57", n:"まこ虎（分かれ道）", lv:"基本形", cat:"とら系",
+  s:"f5d6c3d3c4f4c5b5", note:"白からの変化、Berg Tigerからも合流できる"},
+ {id:"nq-58", n:"バナナ定石（分かれ道）", lv:"基本形", cat:"とら系",
+  s:"f5d6c3d3c4f4c5b4", note:"これがバナナに見えた命名者はとてもセンスがあると思う　B+2 ☆☆☆"},
+ {id:"nq-59", n:"Ishii", lv:"分岐", cat:"とら系",
+  s:"f5d6c3d3c4f4c5b4b5c6f3e6e3", note:"ここまでの分岐が多い、名前の由来は石ではなく石井　±0 ☆"},
+ {id:"nq-60", n:"虎メインライン", lv:"分岐", cat:"とら系",
+  s:"f5d6c3d3c4f4c5b4b5c6f3e6e3g6f6g5d7g3", note:"Ishiiからの派生、かつては最善進行とされていたらしい　±0 ☆"},
+ {id:"nq-61", n:"あっくん定石", lv:"基本形", cat:"とら系",
+  s:"f5d6c3d3c4f4c5b3e2", note:"あっくんこと某強豪が得意としていてこの名がついた、乱戦志向　B-4 ☆☆"},
+ {id:"nq-62", n:"花形定石/ローズビル", lv:"基本形", cat:"とら系",
+  s:"f5d6c3d3c4f4c5b3c2", note:"虎大量の双方最善、美しい　±0 ☆☆☆☆"},
+ {id:"nq-63", n:"金魚定石（分かれ道）", lv:"基本形", cat:"とら系",
+  s:"f5d6c3d3c4f4c5b3c2e6", note:"3つある白最善の一つ、ソフトハメの進行があるらしい　±0 ☆☆☆"},
+ {id:"nq-64", n:"FJT定石（分かれ道）", lv:"基本形", cat:"とら系",
+  s:"f5d6c3d3c4f4c5b3c2b4", note:"白最善の一つ、最善暗記を試みる黒への最大の強敵　±0 ☆☆☆"},
+ {id:"nq-65", n:"酉定石", lv:"基本形", cat:"とら系",
+  s:"f5d6c3d3c4f4c5b3c2e3", note:"白最善の一つ、このあとの分岐まで実戦ではほぼ一本道のイメージ　±0 ☆☆☆"},
+ {id:"nq-66", n:"酉フック", lv:"分岐", cat:"とら系",
+  s:"f5d6c3d3c4f4c5b3c2e3d2c6b4a3", note:"ボクシングから名前を取っている、最善　±0 ☆☆☆"},
+ {id:"nq-67", n:"酉ストレート", lv:"分岐", cat:"とら系",
+  s:"f5d6c3d3c4f4c5b3c2e3d2c6a4", note:"形的にストレート、最善　±0 ☆☆"},
+ {id:"nq-68", n:"酉アッパー", lv:"分岐", cat:"とら系",
+  s:"f5d6c3d3c4f4c5b3c2e3d2c6b4", note:"形的にアッパー、中辺横取りなのもあってこれは最善ではない　B+2 ☆"},
+ {id:"nq-69", n:"Stephenson", lv:"基本形", cat:"とら系",
+  s:"f5d6c3d3c4f4f6", note:"虎定石二大変化の一つ、黒からの仕掛けが多いイメージ　±0 ☆☆☆☆"},
+ {id:"nq-70", n:"カン", lv:"基本形", cat:"とら系",
+  s:"f5d6c3d3c4f4f6b4", note:"開放度理論なんかクソくらえとばかりの手、数値以上に弱い　B+2 ☆☆"},
+ {id:"nq-71", n:"ノーカン", lv:"基本形", cat:"とら系",
+  s:"f5d6c3d3c4f4f6g5", note:"カンではないのでノーカン、こっちのほうが最善　±0 ☆☆☆"},
+ {id:"nq-72", n:"ノーカン (Continuation)", lv:"分岐", cat:"とら系",
+  s:"f5d6c3d3c4f4f6g5e3f3g4h3g3f2", note:"Continuationとあるが、全く最善ではない、ライトニングボルトからの合流が自然かも　±0 ☆"},
+ {id:"nq-73", n:"コンポス", lv:"基本形", cat:"とら系",
+  s:"f5d6c3d3c4f4f6f3", note:"コンポスはComputer's Othello (Comp' Oth)の略、引き分けになる　±0 ☆☆☆"},
+ {id:"nq-74", n:"ライトニングボルト", lv:"基本形", cat:"とら系",
+  s:"f5d6c3d3c4f4f6f3e3", note:"いきなり変化、初見殺し　B-2 ☆☆"},
+ {id:"nq-75", n:"たまプラーザ", lv:"分岐", cat:"とら系",
+  s:"f5d6c3d3c4f4f6f3e6e7f7", note:"たまプラ～ザが正しい表記、黒からの優秀な-2変化　B-2 ☆☆"},
+ {id:"nq-76", n:"ロジステロ流", lv:"分岐", cat:"とら系",
+  s:"f5d6c3d3c4f4f6f3e6e7c6", note:"ロジステロとは人類を破った当時最強のコンピュータの名前である　B-2 ☆☆"},
+ {id:"nq-77", n:"砂虎", lv:"基本形", cat:"とら系",
+  s:"f5d6c3d3c4f4f6f3g4", note:"2025年追加、ライン通しで最善が見えにくそう　B-4 ☆☆"},
+ {id:"nq-78", n:"D8コンポス", lv:"分岐", cat:"とら系",
+  s:"f5d6c3d3c4f4f6f3e6e7d7g6d8", note:"水面下で序盤から詰ます変化がいっぱいある　B-2 ☆☆"},
+ {id:"nq-79", n:"シャープコンポス", lv:"分岐", cat:"とら系",
+  s:"f5d6c3d3c4f4f6f3e6e7d7g6g5c5b6", note:"黒からの有力な変化、シャープの名は斜めに返す定石につけられる　B-2 ☆☆"},
+ {id:"nq-80", n:"フラットコンポス", lv:"分岐", cat:"とら系",
+  s:"f5d6c3d3c4f4f6f3e6e7d7g6g5c5c6", note:"フラットはまっすぐ返す変化につけられる　B-4 ☆☆"},
+ {id:"nq-81", n:"F.A.T. Draw", lv:"分岐", cat:"とら系",
+  s:"f5d6c3d3c4f4f6f3e6e7d7g6f8f7g5h6h4g4h3h5h7", note:"名前の通り引き分けになる大型定石、黒は種消しから全滅を狙う　±0 ☆☆"},
+ {id:"nq-82", n:"ザリガニ定石", lv:"基本形", cat:"とら系",
+  s:"f5d6c3d3c5", note:"序盤で変化する海鮮類、白に自然と内側に潜られ苦しい　B-6 ☆☆"},
+ {id:"nq-83", n:"海老定石", lv:"基本形", cat:"とら系",
+  s:"f5d6c3d3c6", note:"使用感はザリガニ定石とほぼ同じ　B-6 ☆☆"},
+ {id:"nq-85", n:"猫定石", lv:"基本形", cat:"ねこ系",
+  s:"f5d6c4d3c5", note:"逆さになった猫がモチーフらしい、ライン通し合戦が始まる　B-6 ☆☆☆☆"},
+ {id:"nq-86", n:"猫定石・坂口流（分かれ道）", lv:"基本形", cat:"ねこ系",
+  s:"f5d6c4d3c5f4e3f3c2c6", note:"猫定石後の最善進行　B-6 ☆☆☆"},
+ {id:"nq-87", n:"Berner", lv:"分岐", cat:"ねこ系",
+  s:"f5d6c4d3c5f4e3f3c2b4b3", note:"坂口流の手前で白が変化、形が面白い　B-4 ☆"},
+ {id:"nq-88", n:"羊定石", lv:"基本形", cat:"ねこ系",
+  s:"f5d6c4d3e6", note:"たまに愛好家のいる形　B-4 ☆☆"},
+ {id:"nq-90", n:"燕定石（分かれ道）", lv:"基本形", cat:"ねこ系",
+  s:"f5d6c4g5c6", note:"最善、直後に中割りがぴったりなのでミサイル定石と違って互角　±0 ☆☆"},
+ {id:"nq-91", n:"No Cat (Continuation)", lv:"分岐", cat:"ねこ系",
+  s:"f5d6c4g5c6c5d7d3b4c3e3f3", note:"燕定石の最善進行、面白い。 (の前のスペース打ち忘れてそう　±0 ☆"},
+ {id:"nq-92", n:"ラッコ定石（分かれ道）", lv:"基本形", cat:"ねこ系",
+  s:"f5d6c4g5f6", note:"最善、ラッコに見えなくもない？その後の進行がわかりにくい　±0 ☆☆"},
+ {id:"nq-93", n:"兎外し", lv:"基本形", cat:"うさぎ系",
+  s:"f5d6c5b4", note:"ここから兎系、白が強引に外した形、わかりにくい進行になる　B-7 ☆☆"},
+ {id:"nq-94", n:"馬定石", lv:"基本形", cat:"うさぎ系",
+  s:"f5d6c5f4d3", note:"黒からの強い変化、そこそこ見る　B-4 ☆☆☆"},
+ {id:"nq-95", n:"鹿定石", lv:"基本形", cat:"うさぎ系",
+  s:"f5d6c5f4f3", note:"一般的には壁を作る悪手、それにしても馬と鹿って…　B-6 ☆"},
+ {id:"nq-96", n:"鶴定石", lv:"基本形", cat:"うさぎ系",
+  s:"f5d6c5f4d7", note:"幻惑度の高い定石　B-7 ☆"},
+ {id:"nq-97", n:"兎定石", lv:"基本形", cat:"うさぎ系",
+  s:"f5d6c5f4e3", note:"中級者大好き兎定石、脳死で引っ張り合える　B-2 ☆☆☆☆☆"},
+ {id:"nq-98", n:"三村流", lv:"基本形", cat:"うさぎ系",
+  s:"f5d6c5f4e3d3", note:"ライン通しだが、取りすぎらしい　B+6 ☆☆"},
+ {id:"nq-99", n:"大和久流", lv:"基本形", cat:"うさぎ系",
+  s:"f5d6c5f4e3f6f3", note:"人名由来、「おおわぐ」が正しい読み　B+4 ☆☆"},
+ {id:"nq-100", n:"Bhagat", lv:"基本形", cat:"うさぎ系",
+  s:"f5d6c5f4e3c6d7", note:"滅多に見ない変化、数手後のライン通しが見えにくいかも？　B-6 ☆"},
+ {id:"nq-101", n:"Shaman", lv:"基本形", cat:"うさぎ系",
+  s:"f5d6c5f4e3c6f3", note:"Shaman(シェイマン)は人名、初見殺し　B-6 ☆☆"},
+ {id:"nq-102", n:"井上流", lv:"基本形", cat:"うさぎ系",
+  s:"f5d6c5f4e3c6e6", note:"次に白がf7に打つものを井上流というらしい　B-4 ☆☆☆"},
+ {id:"nq-103", n:"雪うさぎ", lv:"基本形", cat:"うさぎ系",
+  s:"f5d6c5f4e3c6e6f6", note:"わかりやすい引っ張り合いになる　B-4 ☆☆☆"},
+ {id:"nq-104", n:"Ralle定石", lv:"基本形", cat:"うさぎ系",
+  s:"f5d6c5f4e3c6d3f3", note:"白からの変化、雪うさぎと似たような変化になりやすい　±0 ☆☆☆"},
+ {id:"nq-105", n:"たまうさぎ", lv:"基本形", cat:"うさぎ系",
+  s:"f5d6c5f4e3c6d3e2", note:"白からの変化、ローズを許さない　B+2 ☆☆"},
+ {id:"nq-106", n:"横うさぎ", lv:"基本形", cat:"うさぎ系",
+  s:"f5d6c5f4e3c6d3g5", note:"これも白からの変化、ローズを許さない　B+2 ☆☆"},
+ {id:"nq-108", n:"Fローズ", lv:"分岐", cat:"うさぎ系",
+  s:"f5d6c5f4e3c6d3f6e6d7g4", note:"ローズ三大変化のうちの一つであるフラットローズ、色々な手があるが…　B-2 ☆☆☆"},
+ {id:"nq-110", n:"Fローズ ローテーション型 (Kling)", lv:"分岐", cat:"うさぎ系",
+  s:"f5d6c5f4e3c6d3f6e6d7g4c4g5c3f7d2e7f2", note:"ぐるぐる回るとこうなる、詰みやすい、実は黒のe7が最善ではない　B-4 ☆☆"},
+ {id:"nq-111", n:"村上流", lv:"分岐", cat:"うさぎ系",
+  s:"f5d6c5f4e3c6d3f6e6d7g4c4g6", note:"中割りを残すがぐるぐる回ってくれたら得をする　B-6 ☆☆"},
+ {id:"nq-114", n:"Sローズ・13-e7　兜割り型", lv:"分岐", cat:"うさぎ系",
+  s:"f5d6c5f4e3c6d3f6e6d7g3c4e7", note:"あまり見ないが有力な変化、何故かスペースが全角　B-4 ☆"},
+ {id:"nq-115", n:"Sローズ ローテーション型 (g5)", lv:"分岐", cat:"うさぎ系",
+  s:"f5d6c5f4e3c6d3f6e6d7g3c4g5", note:"Fローズほど露骨にぐるぐるするわけではない　B-2 ☆☆"},
+ {id:"nq-116", n:"Brightstein", lv:"分岐", cat:"うさぎ系",
+  s:"f5d6c5f4e3c6d3f6e6d7g3c4g5c3b4e2", note:"Sローズの数ある最善進行のうちの一つ　B-2 ☆"},
+ {id:"nq-117", n:"Sローズ ローテーション型(g6)", lv:"分岐", cat:"うさぎ系",
+  s:"f5d6c5f4e3c6d3f6e6d7g3c4g6", note:"これならFローズのように露骨にぐるぐるする　B-4 ☆☆"},
+ {id:"nq-118", n:"Sローズ (為則ローズ)", lv:"分岐", cat:"うさぎ系",
+  s:"f5d6c5f4e3c6d3f6e6d7g3c4b4", note:"これも黒最善　B-2 ☆☆"},
+ {id:"nq-119", n:"ローズ-為則-Kling", lv:"分岐", cat:"うさぎ系",
+  s:"f5d6c5f4e3c6d3f6e6d7g3c4b4c3", note:"これとb3が白最善の返し　B-2 ☆☆"},
+ {id:"nq-120", n:"野兎定石", lv:"基本形", cat:"うさぎ系",
+  s:"f5d6c6", note:"序盤での黒の変化、強い印象はない　B-4 ☆☆"},
+];
+/* ── けいとう（タグ）──────────────────────────────────────
+   定石の系統は、じつは手順のあたまを見るだけで決まる。
+     白2手目 f6 → 斜め取り  → うし系
+     白2手目 f4 → 並び取り  → ねずみ系
+     白2手目 d6 → 縦取り。そこから黒3手目で
+                  c5・c6 → うさぎ系 ／ c3 → とら系 ／ c4 → ねこ系
+   なので、貼りつけた棋譜でも盤に打った手順でも、自動でふり分けられる。
+   （参考：bassy84.net「オセロ･リバーシの勝ち方、必勝法」の定石一覧）    */
+const TAGS=["うさぎ","とら","ねこ","うし","ねずみ"];
+const TAGNOTE={
+  "うさぎ":"白の縦取りに黒c5。いちばん打たれる系統。ローズもこの中にある。",
+  "とら"  :"白の縦取りに黒c3。変化が多く、上級者に好まれる。",
+  "ねこ"  :"白の縦取りに黒c4。猫・羊・燕はここから分かれる。",
+  "うし"  :"白の斜め取り。黒5手目で行き先が大きく変わる。",
+  "ねずみ":"白の並び取り。打つ人は少ないが、研究されると手強い。",
+  "ローズ":"うさぎ系の本線。10手目まで同じで、そこから三大ローズに分かれる。",
+  "そのほか":"初手がf5でないものなど、上のどれにも当てはまらない手順。"
+};
+const ROSE_LINE="f5d6c5f4e3c6d3f6e6d7";
+/** 手順から系統を当てる */
+function autoTag(seq){
+  if(!seq || seq.slice(0,2)!=="f5") return "そのほか";
+  const w2=seq.slice(2,4), b3=seq.slice(4,6);
+  if(w2==="f6") return "うし";
+  if(w2==="f4") return "ねずみ";
+  if(w2==="d6") return ({c5:"うさぎ", c6:"うさぎ", c3:"とら", c4:"ねこ"})[b3] || "そのほか";
+  return "そのほか";
+}
+const isRose = seq => (seq||"").slice(0,ROSE_LINE.length)===ROSE_LINE;
+/** その定石のけいとう。手順で決まるので、付けかえはできない */
+function tagOf(j){ return autoTag(j.s); }
+
+/** 手順の文字列から、1手ずつの配列と各局面を作っておく */
+function prep(j){ j.moves=j.s.match(/../g); j.states=replay(j.moves); return j; }
+for(const j of JOSEKI) prep(j);
+
+// LIB ＝ 収録定石 ＋ 自分で登録した定石。画面はいつもこちらを見る
+let LIB=[], byId={};
+/* おぼえた本数の控え。save() より先に使われることがあるので、ここで用意しておく */
+let TALLY=null;
+function clearTally(){ TALLY=null; }
+function rebuildLib(){
+  LIB=[...JOSEKI, ...(S.custom||[]).map(c=>prep(Object.assign({},c)))];
+  // 名前を変えた定石は、ここで差しかえる（もとのデータは書きかえない）
+  // 手順を直した定石は、その手順で局面を作りなおす（もとのデータは触らない）
+  LIB=LIB.map(j=>{ const k=(S.kifu||{})[j.id];
+                   return (k && k!==j.s) ? prep(Object.assign({},j,{s:k})) : j; });
+  LIB=LIB.map(j=>{ const r=(S.rename||{})[j.id];
+                   return r ? Object.assign({},j,{n:r}) : j; });
+  byId=Object.fromEntries(LIB.map(j=>[j.id,j]));
+  buildAncestry();
+  if(typeof clearTally==="function") clearTally();   // 定石が変わったので数え直す
+}
+
+/* ── どの定石を通ってきたか ──────────────────────────────
+   定石の枝分かれは、じつは棋譜の前方一致そのもの。
+   バナナ定石 f5d6c3d3c4f4c5b4… は 虎大量 f5d6c3d3c4f4c5 で始まっているので、
+   バナナを覚えた人は虎大量も通っている。
+   （虎定石・基本形は …c5 b3 なので、バナナの親ではなく兄弟。これも正しく分かれる）
+   手で木を書かなくても、ここで機械的に決まる。                        */
+function buildAncestry(){
+  for(const j of LIB){
+    const up=[];
+    for(const o of LIB) if(o.s!==j.s && j.s.startsWith(o.s)) up.push(o.id);
+    j.anc=up;
+  }
+}
+
+/**
+ * 定石データの自己チェック。
+ * 手順を実際に最初から打ってみて、「石を1枚も裏返せない手」＝ルール上ありえない手が
+ * 混じっていないかを調べる。自分で定石を足したときの打ちまちがいは、ここで見つかる。
+ * 見つかったらホームのいちばん上に赤い帯で出る（下の「起動」のところで呼んでいる）。
+ */
+function checkJoseki(){
+  const bad=[];
+  for(const j of LIB){
+    let b=startBoard(), p=1;
+    j.moves.forEach((m,i)=>{
+      if(!hasMove(b,p)) p=3-p;                 // 打てるところが無ければパス
+      const [r,c]=toRC(m), f=flips(b,r,c,p);
+      if(!f.length) bad.push(`${j.n}　${i+1}手目の ${m}`);
+      b[r][c]=p; for(const [rr,cc] of f) b[rr][cc]=p;
+      p=3-p;
+    });
+  }
+  return bad;
+}
+
+/* =========================================================================
+   3. 保存データ
+   localStorage が使えない環境があるので必ず try で囲む
+   ========================================================================= */
+const KEY="joseki-mochibe-TEST";   // テスト版。本番とは別の場所に記録する
+const DAYS=["日","月","火","水","木","金","土"];
+
+function defaultWeekdays(){
+  // 各曜日に「基本形2つ・分岐2つ」を順ぐりに配る。
+  // 定石の数より枠のほうが多いので、同じ定石が週に何度かまわってくる＝自然に復習になる。
+  const w={0:[],1:[],2:[],3:[],4:[],5:[],6:[]};
+  const per=2;
+  for(const lv of ["基本形","分岐"]){
+    const pool=JOSEKI.filter(j=>j.lv===lv);
+    let n=0;
+    for(let d=0;d<7;d++) for(let k=0;k<per;k++) w[d].push(pool[n++ % pool.length].id);
+  }
+  return w;
+}
+let S={ level:"基本形", startAt:{}, side:{}, rename:{}, weekdays:defaultWeekdays(),
+        custom:[],            // 自分で登録した定石
+        solved:{}, total:0, today:0, todayKey:"", streak:0, lastDay:"" };
+try{ const raw=localStorage.getItem(KEY); if(raw) S=Object.assign(S,JSON.parse(raw)); }catch(e){}
+if(!Array.isArray(S.custom)) S.custom=[];
+if(!S.startAt) S.startAt={};
+if(!S.perfect) S.perfect={};          // パーフェクトを出した定石（ずっと残る）
+if(!S.dsolved) S.dsolved={};          // きょう正解した問題（日付が変わると消える）
+if(!S.dperfect) S.dperfect={};        // きょうパーフェクトを出した定石（同じ）
+if(!S.att)     S.att={};              // 解いている途中の成績（定石ごと）
+if(!S.fam)     S.fam={};              // 自分で付けかえたタグ（バナナ・岩崎…）
+if(!S.kifu)    S.kifu={};             // 自分で直した手順（収録定石ぶん）
+delete S.tag;  // けいとう（うさぎ・とら…）は手順から決まるので、付けかえは廃止
+if(!S.pos)     S.pos={};
+delete S.cleared;                   // 「その日は出さない」仕様は取りやめ
+delete S.resume;                    // 以前の「全体で1つ」の記録は使わない
+if(!S.side)    S.side={};
+if(!S.rename)  S.rename={};
+// 以前は「何手目から」がアプリ全体で1つだった。定石ごとの設定に移しかえる
+if(S.startMode==="move" && S.startMove>1){
+  for(const ids of Object.values(S.weekdays||{}))
+    for(const id of ids) if(!S.startAt[id]) S.startAt[id]=S.startMove;
+}
+delete S.startMode; delete S.startMove;
+// 以前の保存データはレベル名が「初級／中級」だったので読みかえる
+if(S.level==="初級") S.level="基本形";
+if(S.level==="中級") S.level="分岐";
+rebuildLib();
+function save(){
+  clearTally();                       // 記録が変わったので、数え直す
+  try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){}
+}
+const dayKey = d => `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+/* 日付が変わって最初に開いた日は ★＋1。連続日数もここで数える。
+   ★はごほうびの点数で、モチの姿には関わらない（姿は定石をおぼえると増える） */
+/* きょうの分の記録は、日付が変わったらまっさらにする。
+   「おぼえた」という記録（S.solved／S.perfect）はそのまま残すので、
+   モチの解除やタグの本数には影響しない。                              */
+(function today(){
+  const k=dayKey(new Date());
+  if(S.dayKey===k) return;
+  S.dayKey=k; S.dsolved={}; S.dperfect={};
+  save();
+})();
+
+(function daily(){
+  const k=dayKey(new Date());
+  if(S.lastLoginDay===k) return;
+  const y=new Date(); y.setDate(y.getDate()-1);
+  S.streak = (S.lastLoginDay===dayKey(y)) ? (S.streak||0)+1 : 1;
+  S.lastLoginDay=k; S.todayKey=k; S.today=0;
+  const before=S.total||0;
+  S.total=before+1;
+  S.dailyBonus={pt:1, before};     // ホームを描くときに知らせを出す
+  save();
+})();
+
+/* =========================================================================
+   4. モチの姿と進化
+   ★のたまり具合ではなく「どの系統の定石をおぼえたか」で姿が増える。
+   うさぎ系を6本おぼえれば うさぎもち、というように、
+   勉強したところが、そのまま図鑑に出る作りにしてある。
+   req は出会うための条件。tag＝その系統を need 本、kinds＝上を何種類そろえる。
+   ========================================================================= */
+const FORMS=[
+  {n:"こもち", req:null,
+   w:104, h:70, parts:[],
+   note:"まだ何者でもない、つきたてのモチ。",
+   chara:"まるくて、よくねむる。まだ何にでもなれるので、だれにでもついていく。"},
+  {n:"うさぎもち", req:{tag:"うさぎ", need:6},
+   w:116, h:88, parts:["rabbit"],
+   note:"兎定石のうさぎ。白の縦取りに黒c5をおぼえた姿。",
+   chara:"耳がいい。相手の打つ音でつぎの手を先に聞きとる。おどろくと跳ねる。"},
+  {n:"ねこもち", req:{tag:"ねこ", need:6},
+   w:120, h:90, parts:["cat","whisker"],
+   note:"猫定石のねこ。白の縦取りに黒c4をおぼえた姿。",
+   chara:"きまぐれ。羊や燕とも仲がよく、気が向いた道をふらりと選ぶ。"},
+  {n:"ねずみもち", req:{tag:"ねずみ", need:3},
+   w:122, h:86, parts:["mouse","tail"],
+   note:"ネズミ定石のねずみ。白の並び取りをおぼえた姿。",
+   chara:"こまかいところによく気がつく。せまいすきまを見つけるのが得意。"},
+  {n:"うしもち", req:{tag:"うし", need:6},
+   w:134, h:96, parts:["cow","spots"],
+   note:"牛定石のうし。白の斜め取りをおぼえた姿。",
+   chara:"どっしり構えて動じない。決めた道を、あわてずゆっくり進む。"},
+  {n:"とらもち", req:{tag:"とら", need:6},
+   w:138, h:102, parts:["tiger","stripes"],
+   note:"虎定石のとら。白の縦取りに黒c3をおぼえた姿。",
+   chara:"攻めると決めたら一気に行く。しま模様は、勝負に入った合図。"},
+  {n:"ろーずもち", req:{tag:"ローズ", need:6},
+   w:134, h:108, parts:["flower"],
+   note:"ローズ定石。うさぎ系の本線を咲かせた姿。",
+   chara:"花を咲かせるのが好き。三つの分かれ道を、ぜんぶ覚えている。"},
+  {n:"かがみもち", req:{kinds:4},
+   w:146, h:82, parts:["stack","mikan"],
+   note:"けいとうのモチが4種るいそろって、二段に積み上がった姿。",
+   chara:"積み重ねてきたものが、そのまま形になった。お正月がいちばん元気。"},
+  {n:"にじもち", req:{kinds:6},
+   w:140, h:114, parts:["wings","rainbow","crown"],
+   note:"すべてのけいとうをおぼえた最終形態。",
+   chara:"盤のすみからすみまで見わたせる。めったに姿を見せない。"},
+];
+
+/* ── モチの体の色 ───────────────────────────────────────
+   同じ形でも色が違えば別の子に見える。12色を用意して、
+   定石の家族ごとに1色ずつ配っている。                            */
+const HUES=[
+  ["もも",    "#FFE0EF"], ["ふじ",    "#E7DCFF"], ["みずいろ","#D5ECFF"],
+  ["わかくさ","#DCF5E2"], ["たまご",  "#FFF1C6"], ["あんず",  "#FFE0C2"],
+  ["さんご",  "#FFD5D5"], ["きなこ",  "#F0E2CE"], ["はいいろ","#E6E6F2"],
+  ["みずうみ","#D6F0EA"], ["すみれ",  "#F2D9FF"], ["こがね",  "#FFEAB8"],
+];
+/** 12色ぶんのグラデーションを作って、色の置き場に入れる */
+function makePaints(){
+  const defs=document.querySelector(".paints defs");
+  HUES.forEach(([nm,c],i)=>{
+    const g=document.createElementNS("http://www.w3.org/2000/svg","linearGradient");
+    g.setAttribute("id","gM"+i);
+    g.setAttribute("x1","0"); g.setAttribute("y1","0");
+    g.setAttribute("x2","0"); g.setAttribute("y2","1");
+    g.innerHTML=`<stop offset="0%" stop-color="#FFFFFF"/>`
+               +`<stop offset="55%" stop-color="#FFFFFF"/>`
+               +`<stop offset="100%" stop-color="${c}"/>`;
+    defs.appendChild(g);
+  });
+}
+makePaints();
+
+/* =========================================================================
+   4.5 定石の家族と、そのモチ
+   バナナ定石とその変化型は、まとめて「バナナ」の家族。
+   家族ごとにモチが1体いて、その家族の定石をぜんぶおぼえると出会える。
+   定石を足せば家族も自動で増えるので、ふだんここに手を入れる必要はない。
+   ========================================================================= */
+
+/* 名前の頭だけでは同じ家族にまとまらないものの言いかえ */
+const FAMOV={
+  "Sローズ":"シャープローズ", "Fローズ":"フラットローズ",
+  "酉フック":"酉", "酉ストレート":"酉", "酉アッパー":"酉",
+  "猫→虎":"猫", "ローズ外し":"ローズ", "ウサギ":"ローズ",
+  "北陸バッファロー":"バッファロー", "谷田バッファロー":"バッファロー",
+  "白大量取り":"大量取り", "白裏大量":"裏大量", "バシリスク大量取り":"バシリスク",
+  "No":"No Cat",
+};
+/** 定石の名前から、その家族の名前をとりだす */
+function familyOf(name){
+  let h=String(name).split(/[・（(\s]/)[0];
+  h=h.replace(/(定石|流|システム).*$/,"");
+  h=h.replace(/\s*\d+-?[a-h]?\d*.*$/,"").trim();
+  return FAMOV[h] || h || "そのほか";
+}
+
+/* 家族ごとの見た目。定石の名前がそのまま生きものや乗りものなので、それに寄せてある。
+   ここに書いていない家族は、いちばん下の famLook が名前から自動で決める。
+   hue は体の色の番号（HUES の並び）。                                      */
+const FAMLOOK={
+  // ── うさぎ系 ──
+  "ローズ":        {parts:["flower"],                    hue:0},
+  "シャープローズ":{parts:["flower","stripes"],          hue:10},
+  "フラットローズ":{parts:["flower","dots"],             hue:1},
+  "手塚":          {parts:["flower","ribbon"],           hue:9},
+  "野うさぎ":      {parts:["rabbit","berry"],            hue:3},
+  "玉家":          {parts:["rabbit","ribbon"],           hue:11},
+  "大和久":        {parts:["rabbit"],                    hue:2},
+  "三村":          {parts:["rabbit","dots"],             hue:10},
+  // ── とら系 ──
+  "虎":            {parts:["tiger","stripes"],           hue:5},
+  "酉":            {parts:["bird"],                      hue:11},
+  "FJT":           {parts:["tiger","dots"],              hue:2},
+  "金魚":          {parts:["fish","wave"],               hue:6},
+  "バナナ":        {parts:["banana"],                    hue:4},
+  "まこ虎":        {parts:["tiger"],                     hue:0},
+  // ── ねこ系 ──
+  "猫":            {parts:["cat","whisker"],             hue:7},
+  "No Cat":        {parts:["cat","dots"],                hue:8},
+  "暴走牛":        {parts:["cow","stripes"],             hue:6},
+  "羊":            {parts:["sheep"],                     hue:8},
+  "燕":            {parts:["bird","wings"],              hue:2},
+  "ラッコ":        {parts:["tanuki","shell"],            hue:7},
+  // ── ねずみ系 ──
+  "ネズミ":        {parts:["mouse","tail"],              hue:8},
+  // ── うし系 ──
+  "飛び出し牛":    {parts:["cow","spots"],               hue:3},
+  "快速船":        {parts:["boat","wave"],               hue:2},
+  "大量取り":      {parts:["coin"],                      hue:8},
+  "裏大量":        {parts:["coin"],                      hue:10},
+  "こうもり":      {parts:["bat"],                       hue:1},
+  "裏こうもり":    {parts:["bat","dots"],                hue:10},
+  "戦車":          {parts:["tank"],                      hue:3},
+  "カヌー":        {parts:["boat"],                      hue:9},
+  "沈没船":        {parts:["boat","wave"],               hue:8},
+  "丸岡":          {parts:["cow"],                       hue:1},
+  "ヨット":        {parts:["boat"],                      hue:11},
+  "裏ヨット":      {parts:["boat","dots"],               hue:5},
+  "岩崎":          {parts:["cow","dots"],                hue:9},
+  "野いちご":      {parts:["berry"],                     hue:6},
+  "コブラ":        {parts:["snake"],                     hue:3},
+  "つちのこ":      {parts:["snake","dots"],              hue:4},
+  "砂ヘビ":        {parts:["snake","wave"],              hue:7},
+  "マムシ":        {parts:["snake","stripes"],           hue:6},
+  "バシリスク":    {parts:["snake","crown"],             hue:11},
+  "バッファロー":  {parts:["buffalo"],                   hue:7},
+  "狸":            {parts:["tanuki","spots"],            hue:7},
+  "裏狸":          {parts:["tanuki","dots"],             hue:10},
+  "裏ヘビ":        {parts:["snake"],                     hue:10},
+  "ロケット":      {parts:["rocket"],                    hue:6},
+};
+
+/* 部品ごとの、ひとこと紹介。モチずかんで見られる */
+const MOTIFTEXT={
+  flower :"咲かせるのが好き。日あたりのよい所にいる。",
+  rabbit :"耳がいい。相手の打つ音を先に聞きとる。",
+  tiger  :"攻めると決めたら一気に行く。しま模様は勝負の合図。",
+  cat    :"きまぐれ。気が向いた道をふらりと選ぶ。",
+  mouse  :"こまかいところによく気がつく。すきま探しが得意。",
+  cow    :"どっしり構えて動じない。あわてずゆっくり進む。",
+  bird   :"高いところから盤ぜんたいを見わたしている。",
+  fish   :"水の中みたいに、するりと形を変えていく。",
+  boat   :"風まかせに見えて、ちゃんと行き先を決めている。",
+  snake  :"じっと待つのが得意。動くときは一瞬。",
+  bat    :"暗いほうがよく見える。夜になると元気。",
+  tanuki :"すぐ化ける。ほんとうの姿はだれも知らない。",
+  buffalo:"押されても下がらない。角はかざりではない。",
+  sheep  :"もこもこ。数えているうちに眠くなる。",
+  banana :"あまいものが好き。いつも半分たべかけ。",
+  berry  :"小さいけれど味が濃い。すぐ見つかる。",
+  tank   :"まっすぐしか進まないが、まっすぐは強い。",
+  rocket :"思い立ったら飛ぶ。もどってくるかは知らない。",
+  coin   :"数えるのが好き。石をきれいに積みたがる。",
+  shell  :"おなかの上でいろいろ割る。のんびり屋。",
+};
+/** 書いていない家族の見た目を、名前から決める（同じ名前なら毎回おなじになる） */
+function famLook(key){
+  if(FAMLOOK[key]) return FAMLOOK[key];
+  let h=0; for(const ch of key) h=(h*31+ch.codePointAt(0))>>>0;
+  const pool=["rabbit","cat","mouse","cow","tiger","bird","sheep","tanuki"];
+  // >>> でないと 2^31 を超えたとき負になり、色が選べなくなる
+  return {parts:[pool[h%pool.length]], hue:(h>>>3)%HUES.length};
+}
+
+/** その定石のタグ。自分で付けかえていれば、そちらを優先する */
+function famOf(j){ return (S.fam||{})[j.id] || familyOf(origName(j.id) || j.n); }
+/** その定石に付くタグぜんぶ。自分のぶんと、通ってきた定石のぶん */
+function famsOf(j){
+  const out=new Set([famOf(j)]);
+  for(const id of (j.anc||[])){ const o=byId[id]; if(o) out.add(famOf(o)); }
+  return out;
+}
+
+/** 解除に必要な本数。6本が目安だが、6本ないタグは、あるぶん全部でよい。
+    定石を足していけば、条件はひとりでに6本へ上がる。 */
+const FAM_GOAL=6;
+function famNeed(fam){ return Math.max(1, Math.min(FAM_GOAL, libInFam(fam))); }
+
+let FAMS=[];
+/* モチの顔ぶれは、収録定石にあるタグで決まる（自作の定石で増えたりはしない）。
+   ただし本数を数えるときは、自作の定石もちゃんと入る。                    */
+function buildFamilies(){
+  const seen=[];
+  for(const j of JOSEKI){ const k=familyOf(j.n); if(!seen.includes(k)) seen.push(k); }
+  FAMS=seen.map(k=>{
+    const lk=famLook(k);
+    let h=0; for(const ch of k) h=(h*31+ch.codePointAt(0))>>>0;
+    return {
+      key:"j:"+k, n:k+"もち", fam:k,
+      req:{fam:k},
+      w:110+(h%5)*7, h:78+((h>>>4)%4)*8,
+      hue:lk.hue|0, parts:lk.parts,
+      note:`${k}のタグが付いた定石を、じゅうぶんおぼえた姿。`,
+      chara:MOTIFTEXT[lk.parts[0]] || "まだよく分かっていない子。",
+    };
+  });
+}
+
+/** けいとうのモチ ＋ 定石のモチ。画面はいつもこちらを見る */
+let MOCHI=[];
+function buildMochiList(){
+  buildFamilies();
+  MOCHI=[...FORMS.map(f=>Object.assign({key:"k:"+f.n, hue:0}, f)), ...FAMS];
+}
+
+/** その定石を「おぼえた」ことにしてよいか（出題されるところを全部当てた） */
+function isMastered(j){ const p=jProgress(j); return p.all>0 && p.done>=p.all; }
+/* おぼえた本数の集計。モチ1体ごとに定石を全部数え直すと、
+   定石とモチが増えたぶんだけ掛け算で重くなる。
+   なので1回だけ数えて控えておき、記録が変わったときに作り直す。 */
+function tally(){
+  if(TALLY) return TALLY;
+  // fam＝おぼえた本数、lib＝持っている本数。どちらも1回で数えてしまう
+  const t={tag:{}, fam:{}, lib:{}};
+  for(const j of LIB){
+    const done=isMastered(j);
+    if(done){
+      const tg=tagOf(j);
+      t.tag[tg]=(t.tag[tg]||0)+1;
+      if(isRose(j.s)) t.tag["ローズ"]=(t.tag["ローズ"]||0)+1;
+    }
+    for(const f of famsOf(j)){
+      t.lib[f]=(t.lib[f]||0)+1;
+      if(done) t.fam[f]=(t.fam[f]||0)+1;
+    }
+  }
+  return (TALLY=t);
+}
+/** そのけいとうで、おぼえた定石の数 */
+function masteredIn(tag){ return tally().tag[tag]||0; }
+/** そのタグで、おぼえた定石の数（自作の定石も入る） */
+function masteredInFam(fam){ return tally().fam[fam]||0; }
+/** そのタグの定石を、いま何本持っているか */
+function libInFam(fam){ return tally().lib[fam]||0; }
+/** けいとうにひもづく姿を、いま何種類そろえているか */
+function kindsOpen(){
+  let c=0;
+  MOCHI.forEach((f,i)=>{ if(f.req && f.req.tag && formOpen(i)) c++; });
+  return c;
+}
+/** その姿に出会えているか */
+function formOpen(i){
+  const m=MOCHI[i];
+  const r=m && m.req;
+  if(!r) return true;                                 // こもちは最初からいる
+  // 一度出会ったモチは、あとで定石を足して条件が上がっても、いなくならない
+  if(Array.isArray(S.seenForms) && S.seenForms.includes(m.key)) return true;
+  if(r.kinds!=null) return kindsOpen()>=r.kinds;      // けいとうを何種類そろえたか
+  if(r.fam)  return masteredInFam(r.fam)>=famNeed(r.fam);   // そのタグを何本おぼえたか
+  return masteredIn(r.tag)>=r.need;                   // その系統を何本おぼえたか
+}
+/** 出会うための条件を、そのまま文にする */
+function reqText(i){
+  const r=MOCHI[i] && MOCHI[i].req;
+  if(!r) return "さいしょからいる";
+  if(r.kinds!=null) return `けいとうのモチ ${r.kinds}種るい`;
+  if(r.fam){
+    const need=famNeed(r.fam), have=libInFam(r.fam);
+    return need>=FAM_GOAL ? `${r.fam}のタグを ${need}本`
+                          : `${r.fam}のタグを ${need}本（いま${have}本）`;
+  }
+  return `${r.tag}${r.tag==="ローズ"?"":"系"}を ${r.need}本`;
+}
+/** そこまでの進み具合 */
+function reqProgress(i){
+  const r=MOCHI[i] && MOCHI[i].req;
+  // 出す数は条件どまり。「44/6」のような見え方にしない
+  const cap=(have,need)=>({have:Math.min(have,need), need});
+  if(!r) return {have:1, need:1};
+  if(r.kinds!=null) return cap(kindsOpen(), r.kinds);
+  if(r.fam) return cap(masteredInFam(r.fam), famNeed(r.fam));
+  return cap(masteredIn(r.tag), r.need);
+}
+/** ホームのアリーナに並べられる数の上限。増やしすぎると1体ずつが小さくなる */
+const HOME_MAX=4;
+
+/** ホームに出すモチ（出会っていないものは外す。ひとつも無ければ こもち） */
+function curForms(){
+  const keys=Array.isArray(S.forms)&&S.forms.length ? S.forms : ["k:こもち"];
+  const out=[];
+  for(const k of keys){
+    const i=MOCHI.findIndex(f=>f.key===k);
+    if(i>=0 && formOpen(i) && !out.includes(i)) out.push(i);
+  }
+  return out.length ? out.slice(0,HOME_MAX) : [0];
+}
+/** 代表の1体。設定画面の文などで使う */
+function curForm(){ return curForms()[0]; }
+/** ホームに出す・出さないを切りかえる。ぜんぶ外すことはできない */
+function toggleHome(i){
+  const key=MOCHI[i].key;
+  let a=(Array.isArray(S.forms)&&S.forms.length ? S.forms : ["k:こもち"]).slice();
+  if(a.includes(key)){
+    if(a.length<=1) return false;            // 最後のひとりは外せない
+    a=a.filter(k=>k!==key);
+  }else{
+    if(a.length>=HOME_MAX) return false;     // これ以上は並べられない
+    a.push(key);
+  }
+  S.forms=a; save();
+  return true;
+}
+/** 出会ったばかりの姿を拾う。拾ったぶんは覚えておき、二度は出さない */
+function newlyOpened(){
+  if(!Array.isArray(S.seenForms)) S.seenForms=[];
+  const out=[];
+  MOCHI.forEach((f,i)=>{
+    if(formOpen(i) && !S.seenForms.includes(f.key)){ S.seenForms.push(f.key); out.push(i); }
+  });
+  return out;
+}
+/* この作りに変わる前から遊んでいた人のために、いま出会えている姿は
+   「もう見た」ことにしておく。開いた瞬間に進化が何度も走らないように。 */
+buildMochiList();
+// 前のつくりでは番号でおぼえていたので、名前にそろえ直す
+if(Array.isArray(S.seenForms) && S.seenForms.some(x=>typeof x==="number"))
+  S.seenForms=S.seenForms.map(x=>typeof x==="number" ? (FORMS[x]?"k:"+FORMS[x].n:null) : x)
+                         .filter(Boolean);
+if(typeof S.form==="number") S.form=FORMS[S.form] ? "k:"+FORMS[S.form].n : "k:こもち";
+// 1体だけだったものを、複数えらべる形に移す
+if(!Array.isArray(S.forms)) S.forms = S.form ? [S.form] : ["k:こもち"];
+if(!Array.isArray(S.seenForms)){
+  S.seenForms=[];
+  MOCHI.forEach((f,i)=>{ if(formOpen(i)) S.seenForms.push(f.key); });
+  S.form=S.seenForms[S.seenForms.length-1] || "k:こもち";
+}
+
+/** つぎに出会えそうな姿。けいとうのモチの中から、いちばん近いものを選ぶ */
+function nextGoal(){
+  let best=null;
+  MOCHI.forEach((f,i)=>{
+    if(!f.req || f.req.fam || formOpen(i)) return;
+    const pg=reqProgress(i), rate=pg.have/pg.need;
+    if(!best || rate>best.rate) best={rate, i, have:pg.have, need:pg.need};
+  });
+  return best;
+}
+
+const SVGNS="http://www.w3.org/2000/svg";
+const mk=(parent,tag,attrs)=>{const e=document.createElementNS(SVGNS,tag);
+  for(const a in attrs) e.setAttribute(a,attrs[a]); parent.appendChild(e); return e;};
+const BY=224, CX=100;                       // 足もとのy座標と中心のx座標
+
+/** ふくらんだモチの輪郭を1本のパスで返す */
+function bodyPath(w,h,by){
+  const tw=w*0.76, ty=by-h;
+  return `M ${CX-w/2} ${by}
+          C ${CX-w/2-7} ${by-h*0.42}, ${CX-tw/2-9} ${ty+h*0.3}, ${CX-tw/2} ${ty+3}
+          Q ${CX} ${ty-11}, ${CX+tw/2} ${ty+3}
+          C ${CX+tw/2+9} ${ty+h*0.3}, ${CX+w/2+7} ${by-h*0.42}, ${CX+w/2} ${by}
+          Q ${CX} ${by+9}, ${CX-w/2} ${by} Z`;
+}
+
+/**
+ * モチを1体まるごと描く。
+ * @param g   描き込む先の <g>
+ * @param fi  姿の番号（FORMS の添字）
+ * @param sil true なら真っ白なシルエット。進化演出の「影」に使う
+ */
+let clipSeq=0;                              // 模様の切り抜きに使う名前を重複させないため
+
+/**
+ * モチを1体描く。
+ * @param g   描きこむ <g>
+ * @param f   姿のデータ（w・h・parts・hue を見る）
+ * @param sil true なら真っ白なシルエット。進化演出の「影」に使う
+ */
+function buildMochi(g, f, sil){
+  g.innerHTML="";
+  if(typeof f==="number") f=MOCHI[f];       // 番号で呼ばれても動くようにしておく
+  if(!f) return;
+  const P=f.parts||[];
+  // FORMS に svg（自分で描いた絵）を入れておくと、そちらを使う。
+  // イラストレーターなどで描いた絵に差しかえたくなったら、ここに貼るだけでよい。
+  if(f.svg){ g.innerHTML=f.svg; if(sil) g.setAttribute("class","as-shadow");
+             else g.removeAttribute("class"); return; }
+  const OL   = sil ? "none" : "#4B3A80";
+  const OW   = sil ? 0 : 3.4;
+  const skin = sil ? "#fff" : `url(#gM${f.hue|0})`;
+  const tint = sil ? "#fff" : (HUES[((f.hue|0)%HUES.length+HUES.length)%HUES.length]||HUES[0])[1];
+  const clipId = "mc_"+(++clipSeq);
+
+  // かがみもちだけ体が二段。顔は上の段につく
+  const stack = P.includes("stack");
+  const bh = f.h;                              // 下（本体）の高さ
+  const headBottom = stack ? BY-bh+8 : BY;     // 顔がのっている体の足もと
+  const headH = stack ? 60 : f.h;
+  const headW = stack ? 94 : f.w;
+  const headTop = headBottom-headH;
+
+  // ── 体のうしろに出るもの ──
+  if(P.includes("tail"))
+    mk(g,"path",{d:`M ${CX+f.w/2-6} ${BY-18} q 26 -4 22 -26 q -3 -14 -15 -10`,
+      fill:"none", stroke:sil?"#fff":"#C98FB4", "stroke-width":sil?10:8,
+      "stroke-linecap":"round"});
+  if(P.includes("wings"))
+    [-1,1].forEach(sg=>mk(g,"path",{
+      d:`M ${CX+sg*(f.w/2-12)} ${BY-f.h*0.66} q ${sg*30} -30 ${sg*40} 2
+         q ${-sg*6} 20 ${-sg*40} 8 Z`,
+      fill:sil?"#fff":"#EBDCFF", stroke:OL, "stroke-width":OW*0.8}));
+
+  // ── 耳・角。体より先に描くと体の後ろに回って、生えているように見える ──
+  if(P.includes("rabbit"))
+    [-1,1].forEach(sg=>{
+      const ex=CX+sg*22, ey=headTop-26, rot=`rotate(${sg*9} ${ex} ${ey})`;
+      mk(g,"ellipse",{cx:ex, cy:ey, rx:11, ry:30, fill:skin, stroke:OL,
+        "stroke-width":OW, transform:rot});
+      if(!sil) mk(g,"ellipse",{cx:ex, cy:ey, rx:5, ry:20, fill:"#FFC2DC", transform:rot});
+    });
+  if(P.includes("mouse"))
+    [-1,1].forEach(sg=>{
+      mk(g,"circle",{cx:CX+sg*40, cy:headTop+4, r:22, fill:skin, stroke:OL,"stroke-width":OW});
+      if(!sil) mk(g,"circle",{cx:CX+sg*40, cy:headTop+4, r:13, fill:"#FFC2DC"});
+    });
+  if(P.includes("cow"))
+    [-1,1].forEach(sg=>mk(g,"path",{
+      d:`M ${CX+sg*26} ${headTop+4} q ${sg*16} -10 ${sg*22} -22 q ${-sg*2} 18 ${-sg*12} 26 Z`,
+      fill:sil?"#fff":"#F0C98A", stroke:OL,"stroke-width":OW}));
+  if(P.includes("cat"))
+    [-1,1].forEach(sg=>{
+      mk(g,"path",{d:`M ${CX+sg*16} ${headTop+4} L ${CX+sg*26} ${headTop-30}
+                      L ${CX+sg*42} ${headTop-4} Z`,
+        fill:skin, stroke:OL,"stroke-width":OW,"stroke-linejoin":"round"});
+      if(!sil) mk(g,"path",{d:`M ${CX+sg*24} ${headTop-2} L ${CX+sg*28} ${headTop-19}
+                              L ${CX+sg*35} ${headTop-4} Z`, fill:"#FFC2DC"});
+    });
+  if(P.includes("bat"))                       // こうもり：とがった大きい耳
+    [-1,1].forEach(sg=>{
+      mk(g,"path",{d:`M ${CX+sg*14} ${headTop+6} L ${CX+sg*46} ${headTop-30}
+                      L ${CX+sg*44} ${headTop+4} Z`,
+        fill:skin, stroke:OL,"stroke-width":OW,"stroke-linejoin":"round"});
+      if(!sil) mk(g,"path",{d:`M ${CX+sg*22} ${headTop+1} L ${CX+sg*40} ${headTop-18}
+                              L ${CX+sg*38} ${headTop+2} Z`, fill:"#D9C4F2"});
+    });
+  if(P.includes("tanuki"))                    // たぬき：小さい丸い耳
+    [-1,1].forEach(sg=>
+      mk(g,"circle",{cx:CX+sg*32, cy:headTop-2, r:15, fill:skin,
+        stroke:OL,"stroke-width":OW}));
+  if(P.includes("buffalo"))                   // バッファロー：太く曲がった角
+    [-1,1].forEach(sg=>mk(g,"path",{
+      d:`M ${CX+sg*20} ${headTop+2} q ${sg*30} -6 ${sg*34} -22
+         q ${sg*2} 20 ${-sg*20} 28 Z`,
+      fill:sil?"#fff":"#D8C6A8", stroke:OL,"stroke-width":OW,"stroke-linejoin":"round"}));
+  if(P.includes("sheep"))                     // ひつじ：もこもこ
+    [[-34,-10,17],[-14,-24,16],[10,-25,16],[32,-9,17]].forEach(([dx,dy,r])=>
+      mk(g,"circle",{cx:CX+dx, cy:headTop+dy, r, fill:skin,
+        stroke:OL,"stroke-width":OW}));
+  if(P.includes("bird")){                     // とり：頭の羽
+    [-10,0,10].forEach((dx,i)=>mk(g,"path",{
+      d:`M ${CX+dx} ${headTop+2} q ${dx*0.4-2} -18 ${dx*0.7-1} -26`,
+      fill:"none", stroke:sil?"#fff":"#F2A65A",
+      "stroke-width":sil?9:7, "stroke-linecap":"round"}));
+  }
+  if(P.includes("fish"))                      // さかな：頭のひれ
+    mk(g,"path",{d:`M ${CX-26} ${headTop+2} q 10 -26 26 -26 q 16 0 26 26 Z`,
+      fill:sil?"#fff":"#FFB3A0", stroke:OL,"stroke-width":OW,"stroke-linejoin":"round"});
+  if(P.includes("boat"))                      // ふね：帆
+    mk(g,"path",{d:`M ${CX+2} ${headTop+4} L ${CX+2} ${headTop-40}
+                    L ${CX+30} ${headTop+4} Z`,
+      fill:sil?"#fff":"#FFF6E2", stroke:OL,"stroke-width":OW,"stroke-linejoin":"round"});
+  if(P.includes("rocket"))                    // ロケット：とがった頭
+    mk(g,"path",{d:`M ${CX} ${headTop-44} L ${CX+17} ${headTop+2}
+                    L ${CX-17} ${headTop+2} Z`,
+      fill:sil?"#fff":"#FFC9C9", stroke:OL,"stroke-width":OW,"stroke-linejoin":"round"});
+  if(P.includes("tank")){                     // せんしゃ：砲身
+    mk(g,"rect",{x:CX-10, y:headTop-22, width:20, height:20, rx:5,
+      fill:sil?"#fff":"#CFE0C4", stroke:OL,"stroke-width":OW});
+    mk(g,"rect",{x:CX+8, y:headTop-17, width:34, height:9, rx:4,
+      fill:sil?"#fff":"#CFE0C4", stroke:OL,"stroke-width":OW});
+  }
+  if(P.includes("snake")){                    // へび：頭にのった小さいヘビ
+    mk(g,"path",{d:`M ${CX-22} ${headTop-2} q 14 -22 30 -12 q 14 9 22 -10`,
+      fill:"none", stroke:sil?"#fff":"#9FD6A8",
+      "stroke-width":sil?11:9, "stroke-linecap":"round"});
+    if(!sil) mk(g,"path",{d:`M ${CX+30} ${headTop-24} l 7 -5 m -7 5 l 7 5`,
+      stroke:"#E8607A","stroke-width":2.6, fill:"none","stroke-linecap":"round"});
+  }
+  if(P.includes("banana"))                    // バナナ
+    mk(g,"path",{d:`M ${CX-24} ${headTop-6} q 4 -26 26 -30 q -10 14 -6 26
+                    q 2 8 -20 10 Z`,
+      fill:sil?"#fff":"#FFE07A", stroke:OL,"stroke-width":OW,"stroke-linejoin":"round"});
+  if(P.includes("berry")){                    // いちご
+    mk(g,"path",{d:`M ${CX-14} ${headTop-24} q 14 26 14 26 q 0 0 14 -26 Z`,
+      fill:sil?"#fff":"#FF8FA6", stroke:OL,"stroke-width":OW,"stroke-linejoin":"round"});
+    if(!sil) mk(g,"path",{d:`M ${CX-14} ${headTop-25} h 28`,
+      stroke:"#6FBF8E","stroke-width":5, "stroke-linecap":"round"});
+  }
+  if(P.includes("shell"))                     // ラッコ：おなかにのせた貝
+    mk(g,"path",{d:`M ${CX-16} ${BY-24} q 16 -20 32 0 Z`,
+      fill:sil?"#fff":"#F5D9E8", stroke:OL,"stroke-width":OW,"stroke-linejoin":"round"});
+  if(P.includes("coin"))                      // 大量取り：積んだ石
+    [0,1,2].forEach(i=>mk(g,"ellipse",{cx:CX+30, cy:headTop-6-i*9, rx:15, ry:6,
+      fill:sil?"#fff":(i%2?"#FFF":"#4B3A80"), stroke:OL,"stroke-width":OW*0.8}));
+  if(P.includes("ribbon")){                   // りぼん
+    [-1,1].forEach(sg=>mk(g,"path",{
+      d:`M ${CX+sg*6} ${headTop-8} l ${sg*20} -10 l 0 20 Z`,
+      fill:sil?"#fff":"#FF9FC8", stroke:OL,"stroke-width":OW*0.9,"stroke-linejoin":"round"}));
+    if(!sil) mk(g,"circle",{cx:CX, cy:headTop-8, r:6, fill:"#FFD1E5",
+      stroke:OL,"stroke-width":OW*0.8});
+  }
+  if(P.includes("tiger"))
+    [-1,1].forEach(sg=>{
+      mk(g,"path",{d:`M ${CX+sg*20} ${headTop+6} L ${CX+sg*30} ${headTop-26}
+                      L ${CX+sg*44} ${headTop+2} Z`,
+        fill:skin, stroke:OL,"stroke-width":OW,"stroke-linejoin":"round"});
+      if(!sil) mk(g,"path",{d:`M ${CX+sg*27} ${headTop+2} L ${CX+sg*31} ${headTop-15}
+                              L ${CX+sg*38} ${headTop+0} Z`, fill:"#FFC2DC"});
+    });
+
+  // ── 体 ──
+  const d=bodyPath(f.w,bh,BY);
+  mk(g,"path",{d, fill:skin, stroke:OL, "stroke-width":OW});
+  const cp=mk(g,"clipPath",{id:clipId}); mk(cp,"path",{d});
+  const pat=mk(g,"g",{"clip-path":`url(#${clipId})`});   // 模様が体からはみ出さないように
+  if(!sil){
+    if(P.includes("spots"))
+      [[74,.30,13,9],[122,.55,10,7],[92,.72,8,6],[128,.20,7,5]].forEach(([x,t,rx,ry])=>
+        mk(pat,"ellipse",{cx:x, cy:BY-bh*t, rx, ry, fill:"#B9A4E8", opacity:.85}));
+    if(P.includes("dots"))            // 体の色をそのまま濃くした水玉
+      [[68,.28,10],[124,.5,8],[95,.7,7],[132,.22,6],[60,.62,6]].forEach(([x,t,r])=>
+        mk(pat,"circle",{cx:x, cy:BY-bh*t, r, fill:tint, opacity:.95}));
+    if(P.includes("wave"))            // よこじま（ふね・さかな向け）
+      [.24,.44,.64].forEach(t=>
+        mk(pat,"path",{d:`M 18 ${BY-bh*t} q 30 -8 60 0 q 30 8 60 0 q 30 -8 60 0`,
+          stroke:tint,"stroke-width":9, fill:"none", opacity:.95,"stroke-linecap":"round"}));
+    if(P.includes("stripes"))
+      [.20,.38,.56,.74].forEach(t=>
+        mk(pat,"path",{d:`M 20 ${BY-bh*t} q 40 -9 80 0 q 40 9 80 0`, stroke:"#B183DA",
+          "stroke-width":8, fill:"none", opacity:.9, "stroke-linecap":"round"}));
+    if(P.includes("rainbow"))
+      ["#FFC9DE","#FFE3B8","#CFF2D8","#C6E4FA","#DCC9F5"].forEach((c,i)=>
+        mk(pat,"rect",{x:20, y:BY-bh+(bh/5)*i, width:160, height:bh/5, fill:c, opacity:.8}));
+  }
+
+  // ── 二段重ねの上の段 ──
+  if(stack) mk(g,"path",{d:bodyPath(headW,headH,headBottom), fill:skin,
+                         stroke:OL, "stroke-width":OW});
+
+  // ── 頭の上にのるもの ──
+  if(P.includes("mikan")){
+    mk(g,"circle",{cx:CX, cy:headTop-13, r:15, fill:sil?"#fff":"#FFB56B",
+      stroke:OL,"stroke-width":OW*0.9});
+    if(!sil) mk(g,"path",{d:`M ${CX} ${headTop-27} q 8 -6 14 -2`, stroke:"#6FBF8E",
+      "stroke-width":3.4, fill:"none","stroke-linecap":"round"});
+  }
+  if(P.includes("flower")){
+    for(let i=0;i<5;i++){
+      const a=(Math.PI*2/5)*i - Math.PI/2;
+      mk(g,"ellipse",{cx:CX+Math.cos(a)*17, cy:headTop-6+Math.sin(a)*13, rx:11, ry:9,
+        fill:sil?"#fff":"#FFB3D2", stroke:OL,"stroke-width":OW*0.8});
+    }
+    mk(g,"circle",{cx:CX, cy:headTop-6, r:8, fill:sil?"#fff":"#FFE39B",
+      stroke:OL,"stroke-width":OW*0.8});
+  }
+  if(P.includes("crown"))
+    mk(g,"path",{d:`M ${CX-22} ${headTop-2} L ${CX-18} ${headTop-22} L ${CX-8} ${headTop-11}
+                    L ${CX} ${headTop-28} L ${CX+8} ${headTop-11} L ${CX+18} ${headTop-22}
+                    L ${CX+22} ${headTop-2} Z`,
+      fill:sil?"#fff":"#FFD26B", stroke:OL,"stroke-width":OW,"stroke-linejoin":"round"});
+
+  // ── 顔。シルエットのときは描かない（これが「影」の正体）──
+  if(sil) return;
+  const fy=headTop+headH*0.40;
+  [-1,1].forEach(sg=>{
+    mk(g,"ellipse",{cx:CX+sg*16, cy:fy, rx:5, ry:6.4, fill:"#3A2C66"});
+    mk(g,"circle",{cx:CX+sg*16+2, cy:fy-2.4, r:1.8, fill:"#fff"});
+    mk(g,"ellipse",{cx:CX+sg*(headW*0.32), cy:fy+9, rx:8, ry:5, fill:"#FF9FC8", opacity:.6});
+  });
+  if(P.includes("whisker"))
+    [-1,1].forEach(sg=>[-5,0,5].forEach(dy=>
+      mk(g,"path",{d:`M ${CX+sg*26} ${fy+8+dy*0.5} q ${sg*16} ${dy*0.6} ${sg*26} ${dy}`,
+        stroke:"#3A2C66","stroke-width":2, fill:"none",
+        "stroke-linecap":"round", opacity:.7})));
+  mk(g,"path",{d:`M ${CX-8} ${fy+13} Q ${CX} ${fy+20} ${CX+8} ${fy+13}`,
+    stroke:"#3A2C66","stroke-width":2.6, fill:"none","stroke-linecap":"round"});
+}
+
+/** アリーナにモチを並べる。台座もここで描く（体の数だけ要る） */
+function drawMochi(){
+  const svg=document.getElementById("mochiSvg"), root=document.getElementById("mochiG");
+  if(!root) return;
+  const list=curForms(), STEP=152, W=200+(list.length-1)*STEP;
+  svg.setAttribute("viewBox", `0 24 ${W} 226`);
+  root.innerHTML="";
+  list.forEach((mi,k)=>{
+    const holder=mk(root,"g",{transform:`translate(${k*STEP},0)`});
+    mk(holder,"ellipse",{cx:CX, cy:234, rx:74, ry:13, fill:"url(#gPed)",
+      stroke:"#4B3A80","stroke-width":3});
+    mk(holder,"ellipse",{cx:CX, cy:230, rx:56, ry:8, fill:"#FFF7FC", opacity:.8});
+    buildMochi(mk(holder,"g",{}), mi, false);
+  });
+}
+
+/* ── 進化のアニメーション ─────────────────────────────────
+   ポケモンと同じ順番。
+   影になる → 前の姿と次の姿がだんだん速く入れ替わる → 白く光る → 新しい姿   */
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+let evoBusy=false;
+
+/** 紙ふぶきを用意する（散る向きと色を、1枚ずつばらけさせる） */
+function makeBurst(box){
+  const col=["#FFD26B","#FF9FC8","#9FD8FF","#C6F0CE","#E0C6FF","#FFFFFF"];
+  box.innerHTML="";
+  for(let i=0;i<22;i++){
+    const a=(Math.PI*2/22)*i + Math.random()*0.3;
+    const d=90+Math.random()*70;
+    const e=document.createElement("i");
+    e.style.cssText=`--dx:${(Math.cos(a)*d).toFixed(0)}px;`
+                  + `--dy:${(Math.sin(a)*d).toFixed(0)}px;`
+                  + `--rot:${(Math.random()*720-360).toFixed(0)}deg;`
+                  + `background:${col[i%col.length]};`
+                  + `animation-delay:${(Math.random()*.12).toFixed(2)}s`;
+    box.appendChild(e);
+  }
+}
+
+/**
+ * 新しいモチのお披露目。
+ * 最初はグレーの影で「なにかいる」状態。そこから色が戻って、
+ * 紙ふぶきと光といっしょに出てくる。
+ * @param to 出てくるモチの番号（MOCHI の何番目か）
+ */
+async function playEvolution(to){
+  evoBusy=true;
+  const ov=document.getElementById("evo"),    g=document.getElementById("evoG"),
+        svg=document.getElementById("evoSvg"), txt=document.getElementById("evoTxt"),
+        ok=document.getElementById("evoOk"),   flash=document.getElementById("evoFlash"),
+        rays=document.getElementById("evoRays"), burst=document.getElementById("evoBurst");
+  try{
+    ov.hidden=false; ok.style.display="none";
+    svg.classList.remove("pop");
+    rays.classList.remove("on");
+    burst.classList.remove("go");
+
+    // ① 影。色も名前もまだ分からない
+    buildMochi(g, to, false);            // 絵は本物を描き、CSSでグレーにする
+    svg.classList.add("shadow");
+    txt.textContent="あたらしいモチが かくれている……";
+    await sleep(950);
+
+    // ② 影がとれて、色がもどる
+    flash.classList.add("on");
+    await sleep(150);
+    svg.classList.remove("shadow");
+    rays.classList.add("on");
+    makeBurst(burst); burst.classList.add("go");
+    flash.classList.remove("on");
+    svg.classList.add("pop");
+
+    txt.innerHTML=`<b>${MOCHI[to].n}</b> とうじょう！`
+      +`<div style="font-size:12px;-webkit-text-stroke-width:1.6px;margin-top:5px">${MOCHI[to].note}</div>`;
+    await sleep(700);
+    ok.style.display="";
+    await new Promise(r=>{ ok.onclick=()=>r(); });
+  }catch(e){
+    console.error("登場演出でエラー:",e);        // 途中で失敗しても止まらないようにする
+  }finally{
+    // ここは何があっても必ず通る。evoBusy を戻しそこねると、
+    // 出題の自動送りが止まったまま二度と進まなくなる
+    ov.hidden=true; flash.classList.remove("on"); ok.onclick=null;
+    svg.classList.remove("shadow"); rays.classList.remove("on");
+    burst.classList.remove("go");
+    evoBusy=false;
+  }
+}
+
+/** 本のアイコンに出す「○/52」だけを更新する。
+    絵を描くのは重いので、ずかんを開いたときにだけ描く。            */
+function updateBookBadge(){
+  const bc=document.getElementById("bookCount");
+  if(!bc) return;
+  let got=0;
+  for(let i=0;i<MOCHI.length;i++) if(formOpen(i)) got++;
+  bc.textContent=`${got}/${MOCHI.length}`;
+}
+
+/* ── モチずかん ────────────────────────────────────────
+   まだ出会っていない姿は影で出す。押すと一体ごとの紹介が開く。      */
+function renderCollection(){
+  const g1=document.getElementById("colGrid"), g2=document.getElementById("colGridF");
+  if(!g1) return;
+  g1.innerHTML=""; if(g2) g2.innerHTML="";
+  let got=0;
+  const cur=curForm(), shown=curForms();
+  MOCHI.forEach((f,i)=>{
+    const open=formOpen(i);
+    if(open) got++;
+    const pg=reqProgress(i);
+    const b=document.createElement("button");
+    b.className="colcell"+(open?"":" locked")+(curForms().includes(i)?" now":"");
+    const onHome=shown.includes(i);
+    b.innerHTML=(open
+        ? `<span class="colchk${onHome?" on":""}" role="checkbox"
+                 aria-checked="${onHome}" aria-label="ホームに出す">✓</span>` : "")
+      +`<svg viewBox="0 24 200 226"><g></g></svg>`
+      +`<span class="cname">${open?f.n:"？？？"}</span>`
+      +`<span class="cneed">${open?(onHome?"ホームに出てる":"であった"):`${pg.have}/${pg.need}`}</span>`;
+    buildMochi(b.querySelector("svg g"), i, false);
+    b.addEventListener("click",e=>{
+      // チェックだけを押したときは、紹介を開かずに切りかえる
+      if(open && e.target.classList.contains("colchk")){
+        if(!toggleHome(i)){
+          toast(shown.includes(i) ? "さいごの1体は外せません"
+                                  : `ホームに出せるのは ${HOME_MAX}体までです`);
+          return;
+        }
+        renderCollection(); renderHome(false);
+        return;
+      }
+      openMochiInfo(i);
+    });
+    ((f.req && f.req.fam) ? (g2||g1) : g1).appendChild(b);
+  });
+  document.getElementById("colCount").textContent =
+    `${MOCHI.length}体のうち ${got}体に出会いました`
+    + `　／　ホームに ${curForms().length}体（${HOME_MAX}体まで）`;
+  const bc=document.getElementById("bookCount");
+  if(bc) bc.textContent=`${got}/${MOCHI.length}`;
+}
+
+function openMochiInfo(i){
+  const f=MOCHI[i], open=formOpen(i), pg=reqProgress(i);
+  buildMochi(document.getElementById("miG"), i, false);
+  document.getElementById("miSvg").style.filter = open ? "" : "brightness(0) opacity(.3)";
+  document.getElementById("miName").textContent  = open ? f.n : "？？？";
+  document.getElementById("miNeed").textContent  =
+    f.req ? `${reqText(i)}　${pg.have}/${pg.need}` : reqText(i);
+  document.getElementById("miChara").textContent = open ? (f.chara||"") : "まだ ひみつ";
+  document.getElementById("miNote").textContent  =
+    open ? f.note
+         : (f.req && f.req.tag) ? TAGNOTE[f.req.tag]
+         : (f.req && f.req.fam) ? `${f.req.fam}のタグが付いた定石を ${famNeed(f.req.fam)}本おぼえると出会えます`
+         : "";
+  // 定石のモチは、必要な定石をそのまま並べて見せる。どれが残っているか分かるように
+  const list=document.getElementById("miList");
+  const fam=f.req && f.req.fam ? f.req.fam : null;
+  list.hidden=!fam;
+  if(fam){
+    const rows=LIB.filter(j=>famsOf(j).has(fam))
+      .sort((a,b)=>a.moves.length-b.moves.length);
+    list.innerHTML=rows.map(j=>{
+      const done=isMastered(j), pg=jProgress(j);
+      return `<i class="${done?"got":""}">${j.n}<b>${done?"✓":`${pg.done}/${pg.all}`}</b></i>`;
+    }).join("")
+    + `<i style="background:none;border:0;justify-content:center;opacity:.85">`
+    + `このタグを ${famNeed(fam)}本おぼえると出会えます</i>`;
+  }
+
+  // 出会っている姿なら、その姿に着がえられる
+  const wear=document.getElementById("miWear"), onHome=curForms().includes(i);
+  wear.hidden = !open;
+  wear.textContent = onHome ? "ホームから外す" : "ホームに出す";
+  wear.onclick=()=>{
+    if(!toggleHome(i)){
+      toast(onHome ? "さいごの1体は外せません" : `ホームに出せるのは ${HOME_MAX}体までです`);
+      return;
+    }
+    renderHome(false); renderCollection();
+    document.getElementById("mochiInfo").hidden=true;
+  };
+  document.getElementById("mochiInfo").hidden=false;
+}
+
+/** アリーナに散らすきらきら（初回だけ作る） */
+function seedSparkles(){
+  const a=document.getElementById("arena");
+  [[8,16,.9],[88,10,.7],[16,62,.6],[92,55,.85],[5,40,.5],[95,30,.65],[78,74,.55]]
+   .forEach(([x,y,s],i)=>{
+    const e=document.createElement("div"); e.className="spark";
+    e.style.cssText=`left:${x}%;top:${y}%;transform:scale(${s});animation-delay:${i*.42}s`;
+    a.appendChild(e);
+  });
+}
+/** 正解したときに弾けるきらきら */
+function burst(){
+  const a=document.getElementById("arena");
+  const b=document.createElement("div"); b.className="burst";
+  for(let i=0;i<10;i++){
+    const s=document.createElement("b");
+    const ang=(Math.PI*2/10)*i, r=52+Math.random()*34;
+    s.style.setProperty("--dx",`${Math.cos(ang)*r}px`);
+    s.style.setProperty("--dy",`${Math.sin(ang)*r}px`);
+    s.style.animationDelay=`${i*.02}s`;
+    b.appendChild(s);
+  }
+  a.appendChild(b); setTimeout(()=>b.remove(),1000);
+}
+function toast(txt){
+  const t=document.getElementById("toast");
+  t.textContent=txt; t.classList.add("show");
+  clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove("show"),1600);
+}
+
+/* =========================================================================
+   5. ホーム
+   ========================================================================= */
+function levelOK(j){ return S.level==="すべて" || j.lv===S.level; }   // 新規追加の絞り込み用
+function todayIds(){
+  const d=new Date().getDay();
+  return (S.weekdays[d]||[]).filter(id=>byId[id]);   // 登録されているものがそのまま出る
+}
+
+/** その定石を何手目から出すか（1＝初手から）。定石ごとに持つ */
+function startAtOf(j){
+  const v=(S.startAt||{})[j.id]||1;
+  return Math.min(Math.max(v,1), j.moves.length);
+}
+function startIndex(j){ return startAtOf(j)-1; }
+/** 名前を変える前の、もとの名前 */
+function origName(id){
+  const b=JOSEKI.find(x=>x.id===id); if(b) return b.n;
+  const c=(S.custom||[]).find(x=>x.id===id); return c ? c.n : "";
+}
+/** 収録されたときの手順。直す前にもどしたいときに使う */
+function origKifu(id){
+  const b=JOSEKI.find(x=>x.id===id); if(b) return b.s;
+  const c=(S.custom||[]).find(x=>x.id===id); return c ? c.s : "";
+}
+/** 棋譜を読みやすく、2文字ずつ離した形にする */
+const spaceKifu = s => (s||"").match(/../g) ? s.match(/../g).join(" ") : "";
+/** その定石で「どちらの番を答えるか」。both / black / white */
+function sideOf(j){ return (S.side||{})[j.id]||"both"; }
+
+/**
+ * その定石から出題する手の番号を並べて返す。
+ * 開始手数と「どちらの番か」の両方をここで効かせているので、
+ * 出題・進捗・設定画面の見積もりが必ず一致する。
+ */
+function questionIndices(j){
+  const from=startIndex(j), side=sideOf(j), out=[];
+  for(let k=from;k<j.moves.length;k++){
+    const p=j.states[k].player;             // 1=黒 2=白
+    if(side==="black" && p!==1) continue;
+    if(side==="white" && p!==2) continue;
+    out.push(k);
+  }
+  return out;
+}
+
+/** きょうのぶんの進み具合。ホームのカードはこちらを見る */
+function dayProgress(j){
+  const ks=questionIndices(j);
+  return {done: ks.filter(k=>(S.dsolved||{})[`${j.id}:${k}`]).length, all: ks.length};
+}
+function jProgress(j){
+  const ks=questionIndices(j);
+  return {done: ks.filter(k=>S.solved[`${j.id}:${k}`]).length, all: ks.length};
+}
+
+function renderHome(animate){
+  drawMochi();
+  const fi=curForm(), f=MOCHI[fi], goal=nextGoal();
+  document.getElementById("hudLv").textContent=kindsOpen()+1;
+  document.getElementById("hudName").textContent=f.n;
+  if(goal){
+    document.getElementById("hudXp").style.width=`${Math.min(100,goal.rate*100)}%`;
+    document.getElementById("hudXpTxt").textContent=
+      `${reqText(goal.i)}　${goal.have}/${goal.need}`;
+  }else{
+    document.getElementById("hudXp").style.width="100%";
+    document.getElementById("hudXpTxt").textContent="ぜんぶに出会いました";
+  }
+  document.getElementById("hudTotal").textContent=S.total;
+  document.getElementById("hudStreak").textContent=S.streak;
+
+  const d=new Date().getDay();
+  document.getElementById("ribDay").textContent=`${DAYS[d]}曜日の定石`;
+
+  const ids=todayIds(), grid=document.getElementById("todayGrid");
+  grid.innerHTML="";
+  if(!ids.length){
+    grid.innerHTML=`<div class="empty">この曜日はまだ空っぽ<br>定石とうろくから選んでね</div>`;
+  }else{
+    for(const id of ids){
+      const j=byId[id], p=dayProgress(j), pct=p.all? (p.done/p.all)*100 : 0;
+      const c=document.createElement("button");
+      c.className="jcard"+(j.lv!=="基本形"?" mid":"")
+                 +((S.dperfect||{})[id] ? " shine" : "");   // きょう出したぶんだけ光る
+      c.innerHTML=(lvLabel(j.lv)
+          ? `<span class="lvtag ${lvClass(j.lv)}">${lvLabel(j.lv)}</span>` : "")
+        +`<span class="jn">${j.n}</span>
+        <span class="jbar"><i style="width:${pct}%"></i><span>${p.done}/${p.all}</span></span>`;
+      // カードを押すと、その定石だけを続きから始める
+      c.addEventListener("click",()=>startQuiz([id]));
+      grid.appendChild(c);
+    }
+  }
+  updateBookBadge();          // 絵は描かず、本のバッジの数だけ更新する
+  const btn=document.getElementById("btnStart");
+  btn.disabled=!ids.length;
+  if(ids.length){
+    const list=buildQueue(), at=resumeIndex(list);
+    btn.textContent = at>0 ? `つづきから（${at+1}問め）` : "くいずをとく";
+  }else{
+    btn.textContent="くいずをとく";
+  }
+}
+
+/* =========================================================================
+   6. 出題
+   1問＝「この局面で、次はどこに打つのが定石か」。黒白どちらの手も出題する。
+   ========================================================================= */
+let Q={list:[], i:0, revealed:false, answered:false, wrong:0};
+let lastBandJid=null;                       // 直前に帯を出した定石
+let uiBusy=false;                           // 知らせを出している間は自動で進めない
+
+/**
+ * 次に出すべき問題の位置を返す。
+ * ① 前回とちゅうでやめた問題があれば、そこ
+ * ② なければ、まだ解けていない最初の問題
+ * ③ ぜんぶ解けていたら、最初から復習
+ */
+/**
+ * 出題を始める位置。定石ごとに「次はここから」を覚えてあるので、
+ * その手前まではとばして、続きから始める。
+ */
+function resumeIndex(list){
+  for(let i=0;i<list.length;i++){
+    const at=(S.pos||{})[list[i].jid];
+    if(at==null || list[i].k>=at) return i;
+  }
+  return 0;
+}
+
+/** 定石名の帯を1回流す */
+function showNameBand(name){
+  const el=document.getElementById("nameBand");
+  document.getElementById("bandTxt").textContent=name;
+  el.hidden=false;
+  el.classList.remove("run");
+  void el.offsetWidth;                      // いったん止めて、頭から流し直す
+  el.classList.add("run");
+  clearTimeout(showNameBand._t);
+  showNameBand._t=setTimeout(()=>{ el.hidden=true; el.classList.remove("run"); },1600);
+}
+
+function buildQueue(ids){
+  const out=[];
+  for(const id of (ids || todayIds())){
+    const j=byId[id];
+    for(const k of questionIndices(j)) out.push({jid:id, k});
+  }
+  return out;
+}
+/**
+ * 8x8のマスを組み立てる。出題用と新規登録用で2枚つくるので、
+ * どの要素に描くか・押されたら何をするかを引数でもらう形にしてある。
+ */
+function buildBoardDom(filesId, ranksId, boardId, onClick){
+  const files=document.getElementById(filesId), ranks=document.getElementById(ranksId),
+        board=document.getElementById(boardId);
+  files.innerHTML=""; ranks.innerHTML=""; board.innerHTML="";
+  for(let c=0;c<8;c++){ const e=document.createElement("span");
+    e.textContent=String.fromCharCode(97+c); files.appendChild(e); }
+  for(let r=0;r<8;r++){ const e=document.createElement("span");
+    e.textContent=r+1; ranks.appendChild(e); }
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+    const b=document.createElement("button");
+    b.className="cell"; b.dataset.r=r; b.dataset.c=c;
+    b.setAttribute("aria-label",toSq(r,c));
+    b.innerHTML='<span class="st"></span>';
+    b.addEventListener("click",()=>onClick(r,c));
+    board.appendChild(b);
+  }
+}
+const cellIn=(id,r,c)=>document.getElementById(id).children[r*8+c];
+const cellAt=(r,c)=>cellIn("board",r,c);
+
+/**
+ * 盤面を描く。
+ * @param legalFor 手番の色を渡すと、そこに打てるマスへ薄い丸を出す（新規登録の盤で使う）
+ */
+function paintIn(id,board,lastMove,legalFor,onlyAt){
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+    const cell=cellIn(id,r,c), st=cell.firstElementChild;
+    cell.className="cell";
+    const v=board[r][c];
+    st.className = v ? `st on ${v===1?"b":"w"}` : "st";
+    cell.querySelectorAll(".mk,.hint-dot").forEach(e=>e.remove());
+    if(legalFor && !v && flips(board,r,c,legalFor).length
+       && (!onlyAt || onlyAt===toSq(r,c))){
+      const d=document.createElement("span"); d.className="hint-dot"; cell.appendChild(d);
+    }
+  }
+  if(lastMove){ const [r,c]=toRC(lastMove); cellIn(id,r,c).classList.add("last"); }
+}
+function paint(board,lastMove){ paintIn("board",board,lastMove); }
+function msg(title,sub,cls){
+  document.getElementById("qMsg").innerHTML=
+    (title?`<div class="t ${cls||""}">${title}</div>`:"")+(sub?`<div class="s">${sub}</div>`:"");
+}
+
+function showQ(){
+  const q=Q.list[Q.i], j=byId[q.jid], stt=j.states[q.k];
+  Q.revealed=false; Q.answered=false; Q.wrong=0;
+
+  document.getElementById("qName").textContent=j.n;
+  document.getElementById("qLeft").textContent=Q.list.length-Q.i;
+  document.getElementById("qBar").style.width=`${(Q.i/Q.list.length)*100}%`;
+  document.getElementById("qBarTxt").textContent=`${Q.i+1} / ${Q.list.length}`;
+
+  const black=stt.player===1;
+  document.getElementById("qTurn").innerHTML=
+    `<span class="d ${black?"b":"w"}"></span>${black?"くろ":"しろ"}の番　${q.k+1}手目`;
+
+  paint(stt.board, q.k>0 ? j.moves[q.k-1] : null);
+  msg("", (S.dsolved||{})[`${j.id}:${q.k}`] ? "次の一手をタップ（きょう正解ずみ）"
+                                            : "次の一手をタップ");
+
+  (S.pos||(S.pos={}))[q.jid]=q.k;      // この定石は次ここから、と覚えておく
+  // 定石が変わったら、その定石の成績を数えなおす
+  if(!S.run || S.run.jid!==q.jid){
+    const all=Q.list.filter(x=>x.jid===q.jid).length;
+    const done=Q.list.filter(x=>x.jid===q.jid && x.k<q.k).length;
+    if(!S.att) S.att={};
+    // 最初から始めたときだけ成績をまっさらにする。
+    // 続きから再開したぶんには、前にまちがえた記録をそのまま引きつぐ
+    if(done===0 || !S.att[q.jid]) S.att[q.jid]={wrong:0, revealed:false};
+    const a=S.att[q.jid];
+    S.run={jid:q.jid, all, done, wrong:a.wrong, revealed:a.revealed};
+  }
+  save();
+  if(q.jid!==lastBandJid){                  // 定石が変わったときだけ帯を流す
+    lastBandJid=q.jid;
+    showNameBand(j.n);
+  }
+  document.getElementById("btnReveal").style.display="";
+  document.getElementById("btnNext").style.display="none";
+}
+
+function answer(r,c){
+  if(Q.answered||Q.revealed) return;
+  const q=Q.list[Q.i], j=byId[q.jid], stt=j.states[q.k], sq=toSq(r,c);
+
+  if(!flips(stt.board,r,c,stt.player).length){
+    const cell=cellAt(r,c); cell.classList.add("ng");
+    setTimeout(()=>cell.classList.remove("ng"),330);
+    msg(`${sq} は打てない`,"石を1枚も裏返せない場所だよ","ng"); return;
+  }
+  if(sq!==j.moves[q.k]){
+    Q.wrong++;
+    if(S.run && S.run.jid===j.id){
+      S.run.wrong++;
+      if(S.att && S.att[j.id]) S.att[j.id].wrong=S.run.wrong;   // 再開しても残す
+    }
+    const cell=cellAt(r,c); cell.classList.add("ng");
+    setTimeout(()=>cell.classList.remove("ng"),330);
+    // 1手目だけは専用の文言にする
+    const first = q.k===0 && j.moves[0]==="f5";
+    msg(`${sq} じゃないよ`,
+        first ? "f5以外は邪道だよ！" : "打てる手だけど、定石手は別のところ", "ng");
+    return;
+  }
+
+  // ★は1手ごとではなく、定石を1本解ききったときに入る（下の awardJoseki）
+  Q.answered=true;
+  S.solved[`${j.id}:${q.k}`]=true;                 // ずっと残る記録
+  (S.dsolved||(S.dsolved={}))[`${j.id}:${q.k}`]=true;   // きょうのぶん
+  if(S.run && S.run.jid===j.id) S.run.done++;
+  save();
+  cellAt(r,c).classList.add("ok");
+  setTimeout(()=>paint(j.states[q.k+1].board, j.moves[q.k]),80);
+
+  const rest=(S.run && S.run.jid===j.id) ? (S.run.all - S.run.done) : 0;
+  msg(`せいかい！　${sq}`, rest>0 ? `のこり ${rest}手` : "この定石はこれで最後！", "ok");
+
+  document.getElementById("btnReveal").style.display="none";
+  document.getElementById("btnNext").style.display="";
+  setTimeout(()=>{ if(Q.answered && !evoBusy && !uiBusy) next(); },330);
+}
+
+/** 「こたえを見る」：この手から定石の最後までを盤に番号で出す */
+function reveal(){
+  if(Q.revealed) return;
+  Q.revealed=true;
+  if(S.run){
+    S.run.revealed=true;              // 見た定石は、この回はポイントなし
+    if(S.att && S.att[S.run.jid]) S.att[S.run.jid].revealed=true;
+  }
+  const q=Q.list[Q.i], j=byId[q.jid];
+  paint(j.states[q.k].board, q.k>0 ? j.moves[q.k-1] : null);
+  const rest=[];
+  for(let k=q.k;k<j.moves.length;k++){
+    const m=j.moves[k], [r,c]=toRC(m);
+    const el=document.createElement("span");
+    el.className="mk"+(j.states[k].player===2?" w":"");
+    el.textContent=k+1;
+    cellAt(r,c).appendChild(el);
+    rest.push(`<em>${k+1}</em>${m}`);
+  }
+  msg(`${j.moves[q.k]} が定石手`, j.note+`<div class="seq">${rest.join("　")}</div>`);
+  document.getElementById("btnReveal").style.display="none";
+  document.getElementById("btnNext").style.display="";
+}
+
+/**
+ * 定石を1本ぶん解き終えたときの採点。
+ *   こたえを見た → 0点 ／ ノーミス → 2点 ／ 途中でまちがえた → 1点
+ * 返り値でメッセージと、進化が起きるならその前後の姿を伝える。
+ */
+function awardJoseki(jid){
+  const r=S.run;
+  if(!r || r.jid!==jid || r.done<r.all) return null;   // 途中でやめたぶんは採点しない
+  const nm=(byId[jid]||{}).n||"";
+  // ★が入るのは、まちがえず・こたえも見ずに最後まで解ききったときだけ
+  const perfect = !r.revealed && r.wrong===0;
+  if(!S.perfect) S.perfect={};
+  const firstTime = perfect && !S.perfect[jid];
+  let pt=0, why="";
+  if(perfect){
+    pt=2;
+    why = firstTime ? "パーフェクト！　★＋2　カードが光りました"
+                    : "パーフェクト！　★＋2";
+    S.perfect[jid]=true;                             // ずっと残る記録
+    (S.dperfect||(S.dperfect={}))[jid]=true;         // きょう光らせるぶん
+  }else if(r.revealed){
+    why="こたえを見たので ★はなし";
+  }else{
+    why=`${r.wrong}回まちがえたので ★はなし`;
+  }
+  S.run=null;
+  if(S.att) delete S.att[jid];      // 次はまっさらな成績で挑む
+  if(S.pos) delete S.pos[jid];      // 解き終わったので、次はまた最初から
+  S.total+=pt; S.today+=pt;
+  // ここで初めて「その定石をおぼえた」状態になるので、姿の解放を見にいく
+  // 1本おぼえたことで、いっぺんに何体か出会うこともある。順に見せる
+  const got=newlyOpened();
+  if(got.length){
+    const add=got.map(i=>MOCHI[i].key);
+    const keep=(Array.isArray(S.forms)?S.forms:[]).filter(k=>!add.includes(k));
+    S.forms=[...add, ...keep].slice(0,HOME_MAX);
+    S.form=S.forms[0];
+  }
+  save();
+  return {pt, msg:`${nm}\n${why}`, evo: got.length ? got : null};
+}
+
+async function next(){
+  const cur=Q.list[Q.i];
+  Q.i++;
+  const nxt=Q.list[Q.i];
+  // 次が別の定石になった（＝いまの定石を解ききった）タイミングで採点する
+  if(cur && (!nxt || nxt.jid!==cur.jid)){
+    const res=awardJoseki(cur.jid);
+    // この定石の挑戦はここでおしまい。こたえを見て採点に届かなかったときも、
+    // 成績の控えは捨てておく。残っていると、次に解いてもずっとパーフェクトにならない
+    if(S.att) delete S.att[cur.jid];
+    if(S.run && S.run.jid===cur.jid) S.run=null;   // 採点に届かなかった回も、ここで終わり
+    // 再開位置も捨てる。残っていると、次に開いたとき最後の1問だけ解いて
+    // パーフェクト扱いになってしまう
+    if(S.pos) delete S.pos[cur.jid];
+    save();
+    if(res){
+      uiBusy=true;
+      await qToast(res.msg, res.pt);                 // ボタンを押すまで待つ
+      // 出会った順に、1体ずつ演出を見せる
+      for(const mi of (res.evo||[])) await playEvolution(mi);
+    }
+  }
+  if(Q.i>=Q.list.length){ finish(); return; }
+  showQ();
+}
+
+/** 出題画面に出す短い知らせ */
+/** 定石を1本終えたときの知らせ。ボタンを押すまで待つ */
+function qToast(text, pt){
+  return new Promise(resolve=>{
+    const t=document.getElementById("qToast");
+    t.className="qtoast show"+(pt===2?" perfect":pt===0?" none":"");
+    document.getElementById("qtBody").innerHTML=text.split("\n").map((l,i)=>
+      i===0?`<span class="qt-n">${l}</span>`:`<span class="qt-p">${l}</span>`).join("");
+    const ok=document.getElementById("qtNext");
+    ok.onclick=()=>{ t.classList.remove("show"); ok.onclick=null; uiBusy=false; resolve(); };
+  });
+}
+function finish(){
+  save();
+  renderHome(true); go("home");
+  if(S.today>0) burst();
+  toast("きょうのぶん おわり！");
+}
+
+/* =========================================================================
+   7. 画面の切りかえ
+   ========================================================================= */
+function go(name){
+  for(const s of document.querySelectorAll(".screen")) s.classList.toggle("on", s.id===`s-${name}`);
+  // せってい はタブに無くホームから開くので、その間はホームを点灯させておく
+  const lit = (name==="set"||name==="movie") ? "home" : (name==="new" ? "reg" : name);
+  for(const t of document.querySelectorAll(".tab")) t.setAttribute("aria-selected", t.dataset.s===lit);
+  window.scrollTo(0,0);
+  if(name==="home") renderHome(false);
+  if(name==="reg")  renderReg();
+  if(name==="new")  renderNew();
+  if(name==="set")  renderSet();
+}
+document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
+  if(t.dataset.s==="quiz"){ startQuiz(); return; }
+  go(t.dataset.s);
+}));
+function startQuiz(ids){
+  const list=buildQueue(ids);
+  if(!list.length){ if(!ids) go("reg"); return; }
+  lastBandJid=null;
+  Q={list, i:resumeIndex(list), revealed:false, answered:false, wrong:0};
+  go("quiz"); showQ();
+}
+document.getElementById("btnStart").addEventListener("click",startQuiz);
+/* ── バックアップ ──────────────────────────────────────────
+   ブラウザの保存はリンク（オリジン）ごと・端末ごとに別なので、開く場所が変わると空に見える。
+   中身は消えていないが、持ちはこぶ道がないと困る。ここで文字にして渡せるようにする。 */
+document.getElementById("btnBkOut").addEventListener("click",()=>{
+  const box=document.getElementById("bkText");
+  box.value=JSON.stringify(S);
+  const cnt=(S.custom||[]).length, sv=Object.keys(S.solved||{}).length;
+  showResult("bkResult", true,
+    `○ 書き出しました。自作の定石 ${cnt}本 ／ 正解の記録 ${sv}件<br>`
+    +`この文字をぜんぶコピーして、うつす先のアプリの同じ欄に貼り、「読みこむ」を押してください。`);
+});
+
+document.getElementById("btnBkCopy").addEventListener("click",async ()=>{
+  const box=document.getElementById("bkText");
+  if(!box.value){ showResult("bkResult", false, "✕ さきに「書き出す」を押してください。"); return; }
+  try{
+    await navigator.clipboard.writeText(box.value);
+    showResult("bkResult", true, "○ コピーしました。");
+  }catch(e){
+    box.focus(); box.select();
+    showResult("bkResult", false,
+      "✕ コピーできませんでした。欄の中を長おしして「すべてを選択」→「コピー」してください。");
+  }
+});
+
+document.getElementById("btnBkPaste").addEventListener("click",()=>{
+  pasteInto(document.getElementById("bkText"), "bkResult");
+});
+
+/* 読みこんだ記録を、いまの記録に合流させる。
+   上書きにすると、片方で進めたぶんが消えてしまう。どちらも残す。 */
+function mergeBackup(d){
+  const M=(a,b)=>Object.assign(a||{}, b||{});
+  S.solved =M(S.solved , d.solved);
+  S.perfect=M(S.perfect, d.perfect);
+  S.dsolved=M(S.dsolved, d.dsolved);
+  S.dperfect=M(S.dperfect, d.dperfect);
+  S.rename =M(S.rename , d.rename);
+  S.startAt=M(S.startAt, d.startAt);
+  S.side   =M(S.side   , d.side);
+  S.fam    =M(S.fam    , d.fam);
+
+  // 自作の定石は、手順が同じものを二重に足さない
+  if(!Array.isArray(S.custom)) S.custom=[];
+  const have=new Set(S.custom.map(c=>c.s));
+  let added=0;
+  for(const c of (d.custom||[])){
+    if(have.has(c.s)) continue;
+    have.add(c.s); S.custom.push(c); added++;
+  }
+
+  // 曜日の割り当ては、両方に入っているものを合わせる
+  for(const k of Object.keys(d.weekdays||{})){
+    const set=new Set(S.weekdays[k]||[]);
+    for(const id of (d.weekdays[k]||[])) set.add(id);
+    S.weekdays[k]=[...set];
+  }
+
+  S.total =Math.max(S.total |0, d.total |0);
+  S.streak=Math.max(S.streak|0, d.streak|0);
+  S.seenForms=[...new Set([...(S.seenForms||[]), ...(d.seenForms||[])])];
+  return added;
+}
+
+document.getElementById("btnBkIn").addEventListener("click",async ()=>{
+  const box=document.getElementById("bkText");
+  const raw=(box.value||"").trim();
+  if(!raw){ showResult("bkResult", false, "✕ 欄がからっぽです。バックアップの文字を貼ってください。"); return; }
+  let d=null;
+  try{ d=JSON.parse(raw); }catch(e){
+    showResult("bkResult", false, "✕ 読みとれませんでした。文字が途中で切れていないか見てください。");
+    return;
+  }
+  if(!d || typeof d!=="object" || !("weekdays" in d) && !("custom" in d)){
+    showResult("bkResult", false, "✕ このアプリのバックアップではないようです。");
+    return;
+  }
+  const cnt=(d.custom||[]).length, sv=Object.keys(d.solved||{}).length;
+  const ok=await ask("いまの記録に足します",
+    `読みこむのは 自作の定石 ${cnt}本 ／ 正解の記録 ${sv}件 です。<br>`
+    +`いまこの画面にある記録は<b>消えません</b>。両方が残ります。`, "足す");
+  if(!ok) return;
+  const added=mergeBackup(d);
+  save(); rebuildLib(); buildMochiList(); clearTally();
+  renderHome(false); renderSet();
+  showResult("bkResult", true,
+    `○ 足しました。自作の定石が ${added}本ふえて、ぜんぶで ${S.custom.length}本 になりました。`);
+});
+
+/* ── 定石ムービー ────────────────────────────────────────
+   いま何手目まで進んだかを MV.k で持つ。盤は定石データの各局面を
+   そのまま描くだけなので、計算はいらない。                          */
+const MV={jid:null, k:0, timer:null, speed:800, tag:"すべて"};
+
+/** 一覧を描く。けいとうでしぼりこめる */
+function mvRenderList(){
+  const bar=document.getElementById("mvTag"); bar.innerHTML="";
+  for(const t of ["すべて", ...TAGS]){
+    const b=document.createElement("button");
+    b.textContent = t==="すべて" ? "ぜんぶ" : t;
+    b.setAttribute("aria-pressed", t===MV.tag);
+    b.addEventListener("click",()=>{ MV.tag=t; mvRenderList(); });
+    bar.appendChild(b);
+  }
+  const box=document.getElementById("mvList"); box.innerHTML="";
+  let cnt=0;
+  for(const j of LIB){
+    if(MV.tag!=="すべて" && tagOf(j)!==MV.tag) continue;
+    cnt++;
+    const b=document.createElement("button");
+    b.className="chk"+(j.id===MV.jid?" now":"");
+    b.innerHTML=`${tagChip(j)}<span class="nm">${j.n}</span>`
+               +`<span class="mv">${j.moves.length}手</span>`;
+    b.addEventListener("click",()=>mvLoad(j.id));
+    box.appendChild(b);
+  }
+  document.getElementById("mvCount").textContent=`${cnt}本`;
+}
+
+/** 速さのボタンの見た目をそろえる */
+function mvRenderSpeed(){
+  for(const b of document.querySelectorAll("#mvSpeed button"))
+    b.setAttribute("aria-pressed", String(MV.speed)===b.dataset.v);
+}
+
+/** いまの局面を盤に描き、手順と手番を出す */
+function mvRender(){
+  const j=byId[MV.jid];
+  if(!j){
+    paintIn("mvBoard", startBoard(), null);
+    document.getElementById("mvTurn").innerHTML="定石をえらんでください";
+    return;
+  }
+  const k=Math.max(0, Math.min(MV.k, j.moves.length));
+  const st=j.states[k];
+  paintIn("mvBoard", st.board, k>0 ? j.moves[k-1] : null);
+
+  const last=k>=j.moves.length;
+  document.getElementById("mvTurn").innerHTML = last
+    ? `${j.moves.length}手まで　おわり`
+    : `<span class="d ${st.player===1?"b":"w"}"></span>`
+      +`${st.player===1?"くろ":"しろ"}の番　${k+1}手目`;
+
+  const seq=j.moves.map((m,i)=>
+    `<i class="${i<k?"done":""}${i===k-1?" now":""}">${i+1}${m}</i>`).join("");
+  document.getElementById("mvMsg").innerHTML=
+    `<div class="mv-seq">${seq}</div>`
+    + (last && j.note ? `<div class="s">${j.note}</div>` : "");
+  document.getElementById("mvPlay").textContent = MV.timer ? "とめる" : "さいせい";
+}
+
+function mvStop(){ if(MV.timer){ clearInterval(MV.timer); MV.timer=null; } }
+
+function mvLoad(jid){
+  mvStop(); MV.jid=jid; MV.k=0;
+  mvFold(true);                     // えらんだら一覧はたたむ
+  mvRenderList(); mvRender();
+  window.scrollTo(0,0);
+}
+
+/** 定石えらびの一覧を、たたむ／ひらく */
+function mvFold(fold){
+  const pick=document.getElementById("mvPick");
+  pick.classList.toggle("folded", fold);
+  const j=byId[MV.jid];
+  document.getElementById("mvPickToggle").textContent =
+    fold && j ? `${j.n} ▼` : "どの定石を見る？";
+}
+
+function mvStep(d){
+  const j=byId[MV.jid]; if(!j) return;
+  MV.k=Math.max(0, Math.min(MV.k+d, j.moves.length));
+  mvRender();
+}
+
+function mvPlayPause(){
+  const j=byId[MV.jid];
+  if(!j){ mvRender(); return; }
+  if(MV.timer){ mvStop(); mvRender(); return; }
+  if(MV.k>=j.moves.length) MV.k=0;          // 終わっていたら頭から
+  MV.timer=setInterval(()=>{
+    if(MV.k>=j.moves.length){ mvStop(); mvRender(); return; }
+    MV.k++; mvRender();
+  }, MV.speed);
+  mvRender();
+}
+
+document.getElementById("btnToMovie").addEventListener("click",()=>{
+  go("movie");
+  if(!document.getElementById("mvBoard").children.length)
+    buildBoardDom("mvFiles","mvRanks","mvBoard",()=>{});   // 見るだけなので押しても何もしない
+  mvRenderList(); mvRenderSpeed(); mvRender();
+});
+document.getElementById("btnMovieBack").addEventListener("click",()=>{ mvStop(); go("home"); });
+document.getElementById("mvPrev").addEventListener("click",()=>{ mvStop(); mvStep(-1); });
+document.getElementById("mvNext").addEventListener("click",()=>{ mvStop(); mvStep(1); });
+document.getElementById("mvPlay").addEventListener("click",mvPlayPause);
+document.getElementById("mvPickToggle").addEventListener("click",()=>{
+  mvFold(!document.getElementById("mvPick").classList.contains("folded"));
+});
+for(const b of document.querySelectorAll("#mvSpeed button"))
+  b.addEventListener("click",()=>{
+    MV.speed=+b.dataset.v; mvRenderSpeed();
+    if(MV.timer){ mvStop(); mvPlayPause(); }     // 再生中なら新しい速さで続ける
+  });
+
+document.getElementById("btnToSet").addEventListener("click",()=>go("set"));
+document.getElementById("miClose").addEventListener("click",()=>{
+  document.getElementById("mochiInfo").hidden=true; });
+document.getElementById("btnBook").addEventListener("click",()=>{
+  renderCollection(); document.getElementById("zukan").hidden=false; });
+document.getElementById("zkClose").addEventListener("click",()=>{
+  document.getElementById("zukan").hidden=true; });
+document.getElementById("btnSetBack").addEventListener("click",()=>go("home"));
+document.getElementById("btnReveal").addEventListener("click",reveal);
+document.getElementById("btnNext").addEventListener("click",()=>{Q.answered=false;next();});
+document.getElementById("btnQuit").addEventListener("click",()=>go("home"));
+
+/* =========================================================================
+   8. 設定
+   ========================================================================= */
+let editDay=new Date().getDay();
+
+let selMode=false, selected=new Set();
+
+/**
+ * はい／やめる を聞くダイアログ。答えが返るまで待てる。
+ * ブラウザの confirm() は、アーティファクトのようなサンドボックスの中では
+ * ダイアログが出ないまま false が返ってくるので、自前の画面で置きかえている。
+ */
+function ask(title, body, okLabel, danger){
+  return new Promise(resolve=>{
+    const ov=document.getElementById("ask");
+    const ok=document.getElementById("askOk"), no=document.getElementById("askNo");
+    document.getElementById("askTitle").textContent=title;
+    document.getElementById("askBody").innerHTML=body;
+    ok.textContent=okLabel||"はい";
+    ok.className="btn sm"+(danger?" pink":"");
+    ov.hidden=false;
+    const done=v=>{ ov.hidden=true; ok.onclick=null; no.onclick=null; resolve(v); };
+    ok.onclick=()=>done(true);
+    no.onclick=()=>done(false);
+  });
+}
+
+/* ── もとにもどす ────────────────────────────────────────
+   登録を変える操作の「直前の状態」を控えに積んでおき、
+   ボタンを押すたびに1つずつ巻き戻す。10回前まで戻れる。
+   控えるのは登録内容（曜日ごとの割りふりと自作定石）だけで、
+   解いた数やモチの進化には触らない。                        */
+const UNDO_MAX=10;
+let undoStack=[];
+
+/** いまの登録内容を控える。label は「何をする直前か」の表示用 */
+function snapshot(label){
+  undoStack.push({
+    label,
+    weekdays: JSON.parse(JSON.stringify(S.weekdays)),
+    custom:   JSON.parse(JSON.stringify(S.custom||[])),
+    kifu:     JSON.parse(JSON.stringify(S.kifu||{}))
+  });
+  if(undoStack.length>UNDO_MAX) undoStack.shift();
+}
+/** 控えを1つ取り出して、その状態に戻す */
+function undoLast(){
+  const u=undoStack.pop();
+  if(!u) return;
+  S.weekdays=u.weekdays;
+  S.custom=u.custom;
+  if(u.kifu) S.kifu=u.kifu;
+  selected.clear(); selMode=false;
+  save(); rebuildLib(); renderReg(); renderHome(false);
+}
+
+/* lv は「10手以下か」を持っているだけの目じるし。手数は各行に出ているので、
+   札としては出さない。自作の定石だけはハートで分かるようにしてある。 */
+const lvClass = lv => lv==="じぶん" ? "own" : "";
+/** けいとうの札に使う色の名前 */
+const TAGCLS={"うさぎ":"usagi","とら":"tora","ねこ":"neko","うし":"usi",
+              "ねずみ":"nezumi","ローズ":"rose","そのほか":"hoka"};
+/** けいとうの札を1つ作る（ローズはうさぎ系の中の本線なので、そちらを優先して出す） */
+function tagChip(j){
+  const t=famOf(j);
+  return `<span class="tgchip ${TAGCLS[tagOf(j)]||"hoka"}">${t}</span>`;
+}
+/** 札に出す中身。自作の定石だけハートを出し、ほかは何も出さない */
+const lvLabel = lv => lv==="じぶん" ? "♥" : "";
+
+/** 定石とうろく画面：その曜日に登録されている定石だけを並べる */
+function renderReg(){
+  const dp=document.getElementById("dayPicker"); dp.innerHTML="";
+  DAYS.forEach((d,i)=>{
+    const b=document.createElement("button");
+    b.textContent=d; if(i===0) b.className="sun";
+    b.setAttribute("aria-pressed", i===editDay);
+    b.addEventListener("click",()=>{editDay=i; selected.clear(); renderReg();});
+    dp.appendChild(b);
+  });
+
+  const ids=(S.weekdays[editDay]||[]).filter(id=>byId[id]);
+  const box=document.getElementById("regList"); box.innerHTML="";
+  if(!ids.length){
+    box.innerHTML=`<div class="empty">この曜日はまだ空っぽ<br>＋新規定石 から足してね</div>`;
+  }
+  for(const id of ids){
+    const j=byId[id];
+    const at=startAtOf(j), sd=sideOf(j);
+    const row=document.createElement(selMode?"label":"button");
+    row.className="regrow"+(selMode?"":" tapable");
+    row.innerHTML=(selMode?`<input type="checkbox" ${selected.has(id)?"checked":""}>`:"")
+      +(lvLabel(j.lv) ? `<span class="lvchip ${lvClass(j.lv)}">${lvLabel(j.lv)}</span>` : "")
+      +`<span class="rmain"><span class="nm">${j.n}</span>`
+      +`<span class="rsub">${tagChip(j)}`
+      +((at>1||sd!=="both")?``
+        +(at>1?`<span class="atchip">${at}手目〜</span>`:"")
+        +(sd!=="both"?`<span class="atchip side"><span class="sd ${sd==="black"?"b":"w"}"></span>${sd==="black"?"くろ":"しろ"}</span>`:"")
+        :"")
+      +`</span></span>`
+      +`<span class="mv">${j.moves.length}手</span>`
+      +(selMode?"":`<button class="pen" aria-label="この定石のせってい">✎</button>`);
+    if(selMode) row.querySelector("input").addEventListener("change",e=>{
+      e.target.checked ? selected.add(id) : selected.delete(id);
+      updateDelBtn();
+    });
+    else{
+      // 行を押したら、その曜日かどうかに関わらず、その定石だけを解く
+      row.addEventListener("click",()=>startQuiz([id]));
+      // 鉛筆だけは設定を開く。行のほうへ伝わらないように止める
+      row.querySelector(".pen").addEventListener("click",e=>{
+        e.stopPropagation(); openJEdit(id);
+      });
+    }
+    box.appendChild(row);
+  }
+  document.getElementById("btnSelMode").textContent = selMode ? "選択をやめる" : "選択";
+  document.getElementById("selBar").hidden = !selMode;
+
+  updateDelBtn();
+  const u=undoStack[undoStack.length-1];
+  const ub=document.getElementById("btnUndo");
+  ub.disabled = !u;
+  ub.textContent = u ? `もとにもどす（${u.label}）` : "もとにもどす";
+}
+
+/* ── 定石ごとの設定 ────────────────────────────────────
+   一覧の行をタップすると開く。名前と「何手目から出すか」をここで決める。
+   もとの定石データは書きかえず、S.rename と S.startAt に控えるだけにしてある   */
+let editingJid=null, jeStart=1, jeSideV="both", jeTagV="";
+
+function openJEdit(id){
+  const j=byId[id]; if(!j) return;
+  editingJid=id; jeStart=startAtOf(j); jeSideV=sideOf(j);
+  jeTagV=(S.fam||{})[id] || "";        // 空＝名前から自動で決める
+  document.getElementById("jeKifu").value=spaceKifu(j.s);
+  document.getElementById("jeName").value=j.n;
+  renderJEdit();
+  document.getElementById("jedit").hidden=false;
+}
+function renderJEdit(){
+  const j=byId[editingJid]; if(!j) return;
+  // 入力中の棋譜で考える。打てない手が混じっていたら、きめるを押させない
+  const typed=parseKifu(document.getElementById("jeKifu").value);
+  const v=validateMoves(typed);
+  const kifuNG = !v.ok ? v.msg
+               : typed[0]!=="f5" ? "1手目は f5 だけです。"
+               : null;
+  const moves = kifuNG ? j.moves : typed;
+
+  jeStart=Math.min(Math.max(jeStart,1), moves.length);
+  document.getElementById("jeVal").textContent =
+    jeStart===1 ? "初手から" : `${jeStart}手目から`;
+  for(const b of document.querySelectorAll("#jeSide button"))
+    b.setAttribute("aria-pressed", b.dataset.v===jeSideV);
+
+  // タグ。ふつうは定石の名前から自動で決まるので「おまかせ」を先頭に置く
+  const auto=familyOf(origName(j.id) || j.n);
+  const bar=document.getElementById("jeTag"); bar.innerHTML="";
+  for(const t of ["", ...FAMS.map(f=>f.fam)]){
+    const b=document.createElement("button");
+    b.textContent = t==="" ? `おまかせ（${auto}）` : t;
+    b.setAttribute("aria-pressed", t===jeTagV);
+    b.addEventListener("click",()=>{ jeTagV=t; renderJEdit(); });
+    bar.appendChild(b);
+  }
+
+  // いまの設定で何問になるかを数えて見せる（本番と同じ数えかたを使う）
+  const tmp = kifuNG ? j : prep({id:j.id, n:j.n, lv:j.lv, s:moves.join("")});
+  const saveStart=(S.startAt||{})[j.id], saveSide=(S.side||{})[j.id];
+  S.startAt[j.id]=jeStart; S.side[j.id]=jeSideV;
+  const cnt=questionIndices(tmp).length;
+  if(saveStart===undefined) delete S.startAt[j.id]; else S.startAt[j.id]=saveStart;
+  if(saveSide ===undefined) delete S.side[j.id];    else S.side[j.id] =saveSide;
+
+  const info=document.getElementById("jeInfo");
+  info.className="je-info"+((kifuNG||!cnt)?" zero":"");
+  info.textContent = kifuNG ? `✕ ${kifuNG}`
+    : cnt ? `ぜんぶで${moves.length}手　この設定だと ${cnt}問 出ます`
+          : `この設定だと1問も出ません。手数か番を見なおしてください`;
+  document.getElementById("jeOk").disabled = !!kifuNG || cnt===0;
+  document.getElementById("jeKifuReset").disabled =
+    moves.join("")===origKifu(j.id);
+}
+function closeJEdit(){ document.getElementById("jedit").hidden=true; editingJid=null; }
+function saveJEdit(){
+  if(!editingJid) return;
+  const id=editingJid;
+  const nm=document.getElementById("jeName").value.trim();
+  if(nm && nm!==origName(id)) S.rename[id]=nm; else delete S.rename[id];
+  if(jeStart>1) S.startAt[id]=jeStart; else delete S.startAt[id];
+  if(jeSideV!=="both") S.side[id]=jeSideV; else delete S.side[id];
+  if(jeTagV) S.fam[id]=jeTagV; else delete S.fam[id];
+
+  // 手順を直したときは、この定石の記録を数えなおす（手数が変わると問題がずれる）
+  const typed=parseKifu(document.getElementById("jeKifu").value).join("");
+  if(typed && typed!==byId[id].s){
+    snapshot("きふを直す");
+    for(const k of Object.keys(S.solved))  if(k.startsWith(id+":")) delete S.solved[k];
+    for(const k of Object.keys(S.dsolved||{})) if(k.startsWith(id+":")) delete S.dsolved[k];
+    delete S.perfect[id]; if(S.dperfect) delete S.dperfect[id];
+    if(S.att) delete S.att[id];
+    const c=(S.custom||[]).find(x=>x.id===id);
+    if(c) c.s=typed;                                  // 自作の定石は、そのものを書きかえる
+    else if(typed!==origKifu(id)) S.kifu[id]=typed;   // 収録定石は控えに置く
+    else delete S.kifu[id];
+  }
+  // 出す範囲が変わったので、再開位置の控えは捨てる
+  if(S.pos) delete S.pos[id];
+  save(); rebuildLib(); closeJEdit(); renderReg(); renderHome(false);
+}
+
+/** 「登録から外す」ボタンに、選んだ数を出す。0件なら押せない */
+function updateDelBtn(){
+  const b=document.getElementById("btnDel");
+  b.disabled = selected.size===0;
+  b.textContent = selected.size ? `登録から外す（${selected.size}）` : "登録から外す";
+}
+
+/** 選んだ定石をその曜日から外す。自作定石はどこにも無くなったら本体も消す */
+async function removeSelected(){
+  if(!selected.size) return;
+  const ok=await ask("登録から外す",
+    `えらんだ <b>${selected.size}件</b> を、${DAYS[editDay]}曜日の出題から外します。`,
+    "外す", true);
+  if(!ok) return;
+  snapshot("外した");
+  S.weekdays[editDay]=(S.weekdays[editDay]||[]).filter(id=>!selected.has(id));
+  // どの曜日にも残っていない自作定石は完全に消す
+  const used=new Set(Object.values(S.weekdays).flat());
+  S.custom=(S.custom||[]).filter(c=>used.has(c.id));
+  selected.clear(); selMode=false;
+  save(); rebuildLib(); renderReg(); renderHome(false);
+}
+
+/** せってい画面：アプリの動きかたと、記録 */
+function renderSet(){
+  document.getElementById("resetHint").textContent=
+    `のべ正解 ${S.total}問 ／ いまの姿 ${MOCHI[curForm()].n}`;
+}
+
+document.querySelectorAll("#segLevel button").forEach(b=>b.addEventListener("click",()=>{
+  S.level=b.dataset.v; save(); renderLibList();
+}));
+document.querySelectorAll("#segMode button").forEach(b=>b.addEventListener("click",()=>{
+  newMode=b.dataset.v; renderNew();
+}));
+document.getElementById("btnNew").addEventListener("click",()=>{ newMode="paste"; go("new"); });
+document.getElementById("btnNewBack").addEventListener("click",()=>go("reg"));
+document.getElementById("btnSelMode").addEventListener("click",()=>{
+  selMode=!selMode; selected.clear(); renderReg(); });
+document.getElementById("btnSelCancel").addEventListener("click",()=>{
+  selMode=false; selected.clear(); renderReg(); });
+document.getElementById("btnDel").addEventListener("click",removeSelected);
+document.getElementById("btnUndo").addEventListener("click",undoLast);
+document.getElementById("jeMinus").addEventListener("click",()=>{ jeStart--; renderJEdit(); });
+document.getElementById("jePlus").addEventListener("click",()=>{ jeStart++; renderJEdit(); });
+document.querySelectorAll("#jeSide button").forEach(b=>b.addEventListener("click",()=>{
+  jeSideV=b.dataset.v; renderJEdit(); }));
+document.getElementById("jeCancel").addEventListener("click",closeJEdit);
+document.getElementById("jeOk").addEventListener("click",saveJEdit);
+document.getElementById("jeKifu").addEventListener("input",renderJEdit);
+document.getElementById("jeKifuReset").addEventListener("click",()=>{
+  document.getElementById("jeKifu").value=spaceKifu(origKifu(editingJid));
+  renderJEdit();
+});
+
+// 棋譜をはりつけ
+/* クリップボードの中身を入力欄に入れる。
+   iPhone では押した直後に「ペーストを許可しますか」と出ることがある。
+   読ませてもらえない端末もあるので、そのときは手で貼ってもらう案内を出す。 */
+async function pasteInto(el, resultId){
+  try{
+    const t = await navigator.clipboard.readText();
+    if(!t || !t.trim()){
+      showResult(resultId, false, "✕ クリップボードが からっぽです。");
+      return;
+    }
+    el.value=t.trim();
+    document.getElementById(resultId).hidden=true;
+    el.focus(); el.setSelectionRange(el.value.length, el.value.length);
+  }catch(e){
+    showResult(resultId, false,
+      "✕ この端末からはクリップボードを読めませんでした。<br>"
+      + "入力欄を長おしして「ペースト」を選んでください。");
+  }
+}
+
+document.getElementById("btnPastePaste").addEventListener("click",()=>{
+  pasteInto(document.getElementById("pasteText"), "pasteResult");
+});
+document.getElementById("btnF5Paste").addEventListener("click",()=>{
+  pasteInto(document.getElementById("f5In"), "f5Result");
+});
+document.getElementById("btnF5Clear").addEventListener("click",()=>{
+  document.getElementById("f5In").value="";
+  document.getElementById("f5Result").hidden=true;
+});
+
+document.getElementById("btnPasteCheck").addEventListener("click",()=>{
+  const moves=parseKifu(document.getElementById("pasteText").value);
+  const v=validateMoves(moves);
+  if(!v.ok){ showResult("pasteResult",false,`✕ ${v.msg}`); return; }
+  const tg=autoTag(moves.join(""));
+  showResult("pasteResult",true,
+    `○ ${moves.length}手を読みとりました　けいとうは <b>${tg}${tg==="そのほか"?"":"系"}</b><br>
+     <span class="mono">${moves.join(" ")}</span>
+     <button class="btn sm" id="btnPasteSave">この手順でとうろく</button>`);
+  document.getElementById("btnPasteSave").addEventListener("click",()=>{
+    addCustom(document.getElementById("pasteName").value.trim(), moves);
+    document.getElementById("pasteName").value="";
+    document.getElementById("pasteText").value="";
+    document.getElementById("pasteResult").hidden=true;
+    renderHome(false); go("reg");
+  });
+});
+
+// F5始点メーカー
+document.getElementById("btnF5Go").addEventListener("click",()=>{
+  const moves=parseKifu(document.getElementById("f5In").value);
+  if(!moves.length){ showResult("f5Result",false,"✕ 手順が見つかりませんでした。"); return; }
+  const conv=toF5(moves);
+  if(!conv.ok){ showResult("f5Result",false,`✕ ${conv.msg}`); return; }
+  const v=validateMoves(conv.moves);
+  if(!v.ok){ showResult("f5Result",false,`✕ ${v.msg}<br>元の棋譜そのものが正しくないようです。`); return; }
+  const kifu=conv.moves.join("");
+  showResult("f5Result",true,
+    (conv.already ? "○ もともと f5 始点でした" : `○ ${conv.how} と f5 始点になりました`)
+    + `<div class="kifuout">${kifu}</div>`
+    + `<button class="btn sm lilac" id="btnF5Copy">コピーする</button>`
+    + `<button class="btn sm" id="btnF5Save" style="margin-top:7px">この手順でとうろく</button>`);
+  document.getElementById("btnF5Copy").addEventListener("click",async (e)=>{
+    try{ await navigator.clipboard.writeText(kifu); e.target.textContent="コピーしました"; }
+    catch(_){ e.target.textContent="コピーできませんでした"; }
+  });
+  document.getElementById("btnF5Save").addEventListener("click",()=>{
+    addCustom("", conv.moves);
+    document.getElementById("f5In").value="";
+    document.getElementById("f5Result").hidden=true;
+    renderHome(false); go("reg");
+  });
+});
+
+// 盤に打ってつくる
+document.getElementById("nbUndo").addEventListener("click",()=>{ NB.moves.pop(); nbRender(); });
+document.getElementById("nbClear").addEventListener("click",()=>{ NB.moves=[]; nbRender();
+  document.getElementById("boardResult").hidden=true; });
+document.getElementById("nbSave").addEventListener("click",()=>{
+  const v=validateMoves(NB.moves);
+  if(!v.ok){ showResult("boardResult",false,`✕ ${v.msg}`); return; }
+  addCustom(document.getElementById("boardName").value.trim(), NB.moves.slice());
+  document.getElementById("boardName").value="";
+  NB.moves=[]; nbRender();
+  document.getElementById("boardResult").hidden=true;
+  renderHome(false); go("reg");
+});
+document.getElementById("btnAuto").addEventListener("click",async ()=>{
+  const ok=await ask("おまかせで配る",
+    "収録定石を7曜日に配り直します。<br>いまの登録と自作定石は置きかわります。",
+    "配る", true);
+  if(!ok) return;
+  snapshot("配り直し");
+  S.weekdays=defaultWeekdays();
+  S.custom=[];                       // 収録定石だけの構成に戻る
+  selected.clear(); selMode=false;
+  save(); rebuildLib(); renderReg(); renderHome(false); });
+document.getElementById("btnReset").addEventListener("click",async ()=>{
+  const ok=await ask("きろくをリセット",
+    "のべ正解数とモチの進化をすべて消します。<br>この操作は もとにもどす では戻せません。",
+    "消す", true);
+  if(!ok) return;
+  S.solved={}; S.perfect={}; S.att={}; S.dsolved={}; S.dperfect={};
+  S.total=0; S.today=0; S.streak=0;
+  S.lastDay=""; S.lastLoginDay=""; S.run=null; S.pos={};
+  S.seenForms=["k:こもち"]; S.form="k:こもち"; S.forms=["k:こもち"];  // モチもこもちだけに戻す
+  save(); renderSet(); renderHome(true);
+});
+
+/* =========================================================================
+   9. 新規定石
+   3つの入口：収録済みからえらぶ／棋譜をはりつけ／盤に打つ
+   ========================================================================= */
+let newMode="paste";
+
+/* ── F5始点メーカー ────────────────────────────────────
+   リバーシの初手は d3 / c4 / f5 / e6 の4か所だけで、どれも盤を回したり
+   裏返したりすると重なる。つまり「向きが違うだけの同じ形」なので、
+   f5 から始まる向きに置きなおせる。中身も強さも変わらない。          */
+const F5MAP = {
+  f5: { name:"そのまま",        t:(r,c)=>[r,c]       },
+  c4: { name:"180度まわす",     t:(r,c)=>[7-r,7-c]   },
+  e6: { name:"ななめに折り返す", t:(r,c)=>[c,r]       },
+  d3: { name:"逆ななめに折り返す", t:(r,c)=>[7-c,7-r] },
+};
+
+/** 手順ぜんぶを、f5から始まる向きに置きなおす */
+function toF5(moves){
+  const first=moves[0];
+  const m=F5MAP[first];
+  if(!m) return {ok:false, msg:`1手目が ${first} です。初手として打てるのは d3 / c4 / f5 / e6 だけです。`};
+  const out=moves.map(mv=>{ const [r,c]=toRC(mv); const [nr,nc]=m.t(r,c); return toSq(nr,nc); });
+  return {ok:true, moves:out, how:m.name, already:first==="f5"};
+}
+
+/** 貼りつけた文字から手順だけを拾う。大文字・空白・URL混じりでも動く */
+function parseKifu(text){
+  return (String(text||"").toLowerCase().match(/[a-h][1-8]/g)) || [];
+}
+
+/** 手順がオセロのルールとして成り立つか確かめる */
+function validateMoves(moves){
+  if(!moves.length) return {ok:false, msg:"手順が見つかりませんでした。"};
+  if(moves.length<4) return {ok:false, msg:"手数が短すぎます（4手以上）。"};
+  let b=startBoard(), p=1;
+  for(let i=0;i<moves.length;i++){
+    if(!hasMove(b,p)) p=3-p;
+    const [r,c]=toRC(moves[i]), f=flips(b,r,c,p);
+    if(!f.length) return {ok:false, msg:`${i+1}手目の ${moves[i]} は打てません。`};
+    b[r][c]=p; for(const [rr,cc] of f) b[rr][cc]=p;
+    p=3-p;
+  }
+  return {ok:true};
+}
+
+/** 自作定石を1件つくって、いま開いている曜日に登録する */
+function addCustom(name, moves){
+  snapshot("とうろく");
+  const id="my"+Date.now().toString(36);
+  S.custom.push({id, n:name||"じぶんの定石", lv:"じぶん", cat:"じぶん",
+                 s:moves.join(""), note:"自分で登録した定石です。"});
+  (S.weekdays[editDay]||(S.weekdays[editDay]=[])).push(id);
+  save(); rebuildLib();
+  return id;
+}
+/** 収録済みの定石を、いま開いている曜日に足す／外す */
+function toggleLib(id){
+  snapshot("えらんだ");
+  const arr=S.weekdays[editDay]||(S.weekdays[editDay]=[]);
+  const i=arr.indexOf(id);
+  if(i<0) arr.push(id); else arr.splice(i,1);
+  save();
+}
+
+function renderNew(){
+  for(const b of document.querySelectorAll("#segMode button"))
+    b.setAttribute("aria-pressed", b.dataset.v===newMode);
+  document.getElementById("modeLib").style.display   = newMode==="lib"   ? "" : "none";
+  document.getElementById("modePaste").style.display = newMode==="paste" ? "" : "none";
+  document.getElementById("f5maker").style.display   = newMode==="paste" ? "" : "none";
+  document.getElementById("modeBoard").style.display = newMode==="board" ? "" : "none";
+  if(newMode==="lib") renderLibList();
+  if(newMode==="board") nbRender();
+}
+
+let libTag="すべて";                  // えらぶ画面の、けいとうのしぼりこみ
+
+function renderLibList(){
+  for(const b of document.querySelectorAll("#segLevel button"))
+    b.setAttribute("aria-pressed", b.dataset.v===S.level);
+
+  // けいとうのボタンを並べる。うしろに、いま何本おぼえたかを出す
+  const bar=document.getElementById("segTag"); bar.innerHTML="";
+  for(const t of ["すべて", ...TAGS, "ローズ"]){
+    const b=document.createElement("button");
+    b.textContent = t==="すべて" ? "ぜんぶ" : `${t} ${masteredIn(t)}`;
+    b.setAttribute("aria-pressed", t===libTag);
+    b.addEventListener("click",()=>{ libTag=t; renderLibList(); });
+    bar.appendChild(b);
+  }
+
+  const arr=S.weekdays[editDay]||[];
+  const box=document.getElementById("libList"); box.innerHTML="";
+  let cnt=0;
+  for(const j of LIB){
+    if(!levelOK(j)) continue;
+    if(libTag!=="すべて"){
+      const hit = libTag==="ローズ" ? isRose(j.s) : tagOf(j)===libTag;
+      if(!hit) continue;
+    }
+    cnt++;
+    const l=document.createElement("label");
+    l.className="chk"+(isMastered(j)?" got":"");
+    l.innerHTML=`<input type="checkbox" ${arr.includes(j.id)?"checked":""}>
+      ${tagChip(j)}<span class="nm">${j.n}</span>
+      <span class="mv">${j.moves.length}手</span>`;
+    l.querySelector("input").addEventListener("change",()=>{ toggleLib(j.id); });
+    box.appendChild(l);
+  }
+  document.getElementById("libCount").textContent =
+    libTag==="すべて" ? `${cnt}本 えらべます`
+                      : `${libTag}${libTag==="ローズ"?"":"系"}は ${cnt}本。おぼえたのは ${masteredIn(libTag)}本`;
+  if(!cnt) box.innerHTML=`<div class="empty">この組みあわせの定石がないよ</div>`;
+}
+
+/* ── 盤に打ってつくる ───────────────────────────────────── */
+let NB={moves:[]};
+
+/** 手順から現在の盤面と手番を作り直す */
+function nbState(){
+  let b=startBoard(), p=1;
+  for(const m of NB.moves){
+    if(!hasMove(b,p)) p=3-p;
+    const [r,c]=toRC(m), f=flips(b,r,c,p);
+    b[r][c]=p; for(const [rr,cc] of f) b[rr][cc]=p;
+    p=3-p;
+  }
+  if(!hasMove(b,p)) p=3-p;
+  return {board:b, player:p};
+}
+function nbRender(){
+  const st=nbState();
+  // 1手目は f5 だけ。盤の向きをそろえるため、ここから始めてもらう
+  paintIn("nbBoard", st.board, NB.moves[NB.moves.length-1]||null, st.player,
+          NB.moves.length===0 ? "f5" : null);
+  const black=st.player===1;
+  document.getElementById("nbTurn").innerHTML=
+    `<span class="d ${black?"b":"w"}"></span>${black?"くろ":"しろ"}の番　${NB.moves.length+1}手目`;
+  document.getElementById("nbSeq").textContent =
+    NB.moves.length ? NB.moves.join(" ") : "まだ1手も打っていません";
+}
+function nbPlay(r,c){
+  if(document.getElementById("s-new").classList.contains("on")===false) return;
+  const st=nbState();
+  if(!flips(st.board,r,c,st.player).length) return;   // 打てないマスは無視
+  const sq=toSq(r,c);
+  if(NB.moves.length===0 && sq!=="f5"){               // 1手目は f5 だけ
+    showResult("boardResult", false,
+      `✕ 1手目は <b>f5</b> からです。<br>盤の向きをそろえるため、ここでは f5 始点だけを受け付けます。`);
+    return;
+  }
+  document.getElementById("boardResult").hidden=true;
+  NB.moves.push(sq);
+  nbRender();
+}
+
+function showResult(id, ok, html){
+  const el=document.getElementById(id);
+  el.hidden=false; el.className="result "+(ok?"ok":"ng"); el.innerHTML=html;
+}
+
+/* 入力欄に触れるとキーボードが出る。そのとき iPhone は下に固定した帯を
+   キーボードの上へ持ち上げてしまうので、入力中は下のタブを引っこめる。
+   ついでに、入力欄を画面の真ん中へ戻してやる。 */
+for(const el of document.querySelectorAll("input[type=text], textarea")){
+  el.addEventListener("focus",()=>{
+    document.body.classList.add("typing");
+    setTimeout(()=>{ try{ el.scrollIntoView({block:"center", behavior:"smooth"}); }catch(_){} },320);
+  });
+  el.addEventListener("blur",()=>document.body.classList.remove("typing"));
+}
+
+/* ── 起動 ─────────────────────────────────────────────── */
+buildBoardDom("files","ranks","board",answer);
+buildBoardDom("nbFiles","nbRanks","nbBoard",nbPlay);
+seedSparkles();
+renderHome(false);
+
+// オフラインでも動くように、係（sw.js）を登録しておく。
+// file:// で直接開いたときは使えないので、その場合は黙って何もしない。
+if("serviceWorker" in navigator && location.protocol.startsWith("http")){
+  /* テスト版ではサービスワーカーを登録しない。直したものがすぐ出るように */
+}
+
+// 日付が変わって最初に開いた日は、ホームでログインボーナスを知らせる
+if(S.dailyBonus){
+  const b=S.dailyBonus; S.dailyBonus=null; save();
+  setTimeout(async ()=>{
+    toast("ログインボーナス　★＋1");
+    burst();
+    renderHome(true);
+  }, 700);
+}
+
+// 定石データにルール上ありえない手が無いか確かめて、あればホームの上に出す
+const dataErrors=checkJoseki();
+if(dataErrors.length){
+  const w=document.getElementById("dataWarn");
+  w.hidden=false;
+  w.innerHTML="<b>この手は打てません</b>"+dataErrors.map(x=>"・"+x).join("<br>")
+    +"<br>手順の文字をもう一度たしかめてください。";
+}
+</script>
