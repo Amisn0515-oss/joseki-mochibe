@@ -3111,7 +3111,8 @@ function answer(r,c){
   setTimeout(()=>paint(j.states[q.k+1].board, j.moves[q.k]),80);
 
   const rest=(S.run && S.run.jid===j.id) ? (S.run.all - S.run.done) : 0;
-  msg(`せいかい！　${dsq}`, rest>0 ? `のこり ${rest}手` : "この定石はこれで最後！", "ok");
+  // 右上の「のこり」はきょう全体の問題数。こちらはこの定石の残り手数なので、言い分ける
+  msg(`せいかい！　${dsq}`, rest>0 ? `この定石はあと ${rest}手` : "この定石はこれで最後！", "ok");
 
   document.getElementById("btnReveal").style.display="none";
   document.getElementById("btnNext").style.display="";
@@ -3254,7 +3255,10 @@ function startQuiz(ids){
   Q={list, i:resumeIndex(list), revealed:false, answered:false, wrong:0};
   go("quiz"); showQ();
 }
-document.getElementById("btnStart").addEventListener("click",startQuiz);
+/* startQuiz(ids) は引数を取る。関数をそのまま渡すと、クリックの情報が
+   ids として入ってしまい、中の for...of で落ちてボタンが効かなくなる。
+   かならず包んで、引数なしで呼ぶこと。                                */
+document.getElementById("btnStart").addEventListener("click",()=>startQuiz());
 /* ── バックアップ ──────────────────────────────────────────
    ブラウザの保存はリンク（オリジン）ごと・端末ごとに別なので、開く場所が変わると空に見える。
    中身は消えていないが、持ちはこぶ道がないと困る。ここで文字にして渡せるようにする。 */
