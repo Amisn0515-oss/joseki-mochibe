@@ -277,12 +277,14 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
 /* 復習の入口。見出しの下に、拾ったものを2行で見せる */
 .btn.review{display:flex;flex-direction:column;align-items:center;gap:3px;
   padding:12px 12px 11px}
-/* 絵文字は端末まかせの絵が出てしまうので、下のタブと同じ線の絵にそろえる */
+/* 絵文字は端末まかせの絵が出てしまうので、下のタブと同じ線の絵にそろえる。
+   ふちどりは、太い線を下に敷いてから白い線を重ねて作る。
+   ぼかし（drop-shadow）で代用すると、影が浮いて見える。 */
 .review .rv-t{font-size:15px;display:flex;align-items:center;gap:7px}
-.review .rv-t svg{width:19px;height:19px;fill:none;stroke:#fff;stroke-width:2.6;
-  stroke-linecap:round;stroke-linejoin:round;-webkit-text-stroke:0;
-  filter:drop-shadow(0 0 1.1px var(--outline)) drop-shadow(0 0 1.1px var(--outline))
-         drop-shadow(0 0 1.1px var(--outline))}
+.review .rv-t svg{width:19px;height:19px;overflow:visible;-webkit-text-stroke:0}
+.review .rv-t svg g{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.review .rv-t svg .ol{stroke:var(--outline);stroke-width:7}
+.review .rv-t svg .in{stroke:#fff;stroke-width:2.8}
 .review .rv-l{font-size:11.5px;font-weight:700;-webkit-text-stroke-width:0;color:#4A2A6E}
 .review .rv-l.dim{font-weight:400;opacity:.72}
 
@@ -926,8 +928,8 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
     <button class="btn sm lilac review" id="btnReview" hidden>
       <span class="rv-t">
         <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M4.6 15.4A8.4 8.4 0 1 0 6.6 6.4L3 10"/>
-          <path d="M3 4.6V10h5.4"/>
+          <g class="ol"><path d="M4.6 15.4A8.4 8.4 0 1 0 6.6 6.4L3 10"/><path d="M3 4.6V10h5.4"/></g>
+          <g class="in"><path d="M4.6 15.4A8.4 8.4 0 1 0 6.6 6.4L3 10"/><path d="M3 4.6V10h5.4"/></g>
         </svg>復習する</span>
       <span class="rv-l" id="rvMiss"></span>
       <span class="rv-l" id="rvOld"></span>
