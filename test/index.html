@@ -263,6 +263,9 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
   opacity:0;transform:translateY(10px) scale(.9);transition:.28s cubic-bezier(.3,1.5,.6,1)}
 .toast.show{opacity:1;transform:translateY(0) scale(1)}
 
+/* きょうの定石のそえ書き。カードの下に小さく置く */
+.daynote{margin-top:9px}
+
 /* ── 定石カード ─────────────────────────────────────────── */
 .cardgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
 .jcard{position:relative;text-align:left;padding:8px 9px 9px;border-radius:14px;
@@ -463,7 +466,7 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
   stroke-linecap:round;stroke-linejoin:round;-webkit-text-stroke:0;
   filter:drop-shadow(0 0 1.2px var(--outline)) drop-shadow(0 0 1.2px var(--outline))}
 
-/* ── 定石とうろく・新規定石 ─────────────────────────────── */
+/* ── 出題する定石・定石を追加 ───────────────────────────── */
 .rowbar{display:flex;gap:8px}
 .rowbar[hidden]{display:none}
 .rowbar .btn{flex:1}
@@ -888,6 +891,8 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
     <div class="panel">
       <div class="ribbon out sm" id="ribDay">きょうの定石</div>
       <div class="cardgrid" id="todayGrid"></div>
+      <div class="hint daynote">曜日ごとに、その日に出す定石が決めてあります。
+        中身を変えるときは下の「出題する定石」から。</div>
     </div>
 
     <button class="btn big" id="btnStart">くいずをとく</button>
@@ -931,15 +936,15 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
     </div>
   </section>
 
-  <!-- ══════════ 定石とうろく（どの定石をいつ出すか）══════════ -->
+  <!-- ══════════ 出題する定石（どの定石をいつ出すか）══════════ -->
   <section class="screen" id="s-reg">
-    <div class="qbar"><div class="out sm qtitle" style="padding-left:6px">定石とうろく</div></div>
+    <div class="qbar"><div class="out sm qtitle" style="padding-left:6px">出題する定石</div></div>
 
     <div class="panel field">
       <div class="ribbon out sm">どの曜日に出す？</div>
       <div class="days" id="dayPicker"></div>
       <div class="rowbar">
-        <button class="btn sm" id="btnNew">＋ 新規定石</button>
+        <button class="btn sm" id="btnNew">＋ 定石を追加</button>
         <button class="btn sm lilac" id="btnSelMode">選択</button>
       </div>
       <div class="reglist" id="regList"></div>
@@ -960,13 +965,13 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
     <div style="height:6px"></div>
   </section>
 
-  <!-- ══════════ 新規定石 ══════════ -->
+  <!-- ══════════ 定石を追加 ══════════ -->
   <section class="screen" id="s-new">
     <div class="qbar">
       <button class="iconbtn" id="btnNewBack" aria-label="もどる">
         <svg viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></svg>
       </button>
-      <div class="out sm qtitle">新規定石</div>
+      <div class="out sm qtitle">定石を追加</div>
     </div>
 
     <div class="seg" id="segMode">
@@ -1176,7 +1181,7 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
     <button class="tab" data-s="quiz" aria-selected="false">
       <svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="9" cy="9" r="2.2"/><circle cx="15" cy="15" r="2.2"/></svg>とく</button>
     <button class="tab" data-s="reg" aria-selected="false">
-      <svg viewBox="0 0 24 24"><path d="M4 7.5 5.6 9l3-3.2"/><path d="M4 16 5.6 17.5l3-3.2"/><path d="M12 7h8M12 16h8"/></svg>定石とうろく</button>
+      <svg viewBox="0 0 24 24"><path d="M4 7.5 5.6 9l3-3.2"/><path d="M4 16 5.6 17.5l3-3.2"/><path d="M12 7h8M12 16h8"/></svg>出題する定石</button>
   </div></nav>
 
   <!-- ══════════ 定石名の帯（出題の頭で流れる）══════════ -->
@@ -2874,7 +2879,7 @@ function renderHome(animate){
   const ids=todayIds(), grid=document.getElementById("todayGrid");
   grid.innerHTML="";
   if(!ids.length){
-    grid.innerHTML=`<div class="empty">この曜日はまだ空っぽ<br>定石とうろくから選んでね</div>`;
+    grid.innerHTML=`<div class="empty">この曜日はまだ空っぽ<br>出題する定石 から選んでね</div>`;
   }else{
     for(const id of ids){
       const j=byId[id], p=dayProgress(j), pct=p.all? (p.done/p.all)*100 : 0;
@@ -3391,11 +3396,12 @@ function mvRender(){
   const st=j.states[k];
   paintIn("mvBoard", st.board, k>0 ? j.moves[k-1] : null);
 
+  // あと何手あるのかが分かるように、ぜんぶの手数もいっしょに出す
   const last=k>=j.moves.length;
   document.getElementById("mvTurn").innerHTML = last
-    ? `${j.moves.length}手まで　おわり`
+    ? `${j.moves.length} / ${j.moves.length}手　おわり`
     : `<span class="d ${st.player===1?"b":"w"}"></span>`
-      +`${st.player===1?"くろ":"しろ"}の番　${k+1}手目`;
+      +`${st.player===1?"くろ":"しろ"}の番　${k+1} / ${j.moves.length}手目`;
 
   const seq=j.moves.map((m,i)=>
     `<i class="${i<k?"done":""}${i===k-1?" now":""}">${i+1}${fSq(m)}</i>`).join("");
@@ -3574,7 +3580,7 @@ function tagChip(j){
 /** 札に出す中身。自作の定石だけハートを出し、ほかは何も出さない */
 const lvLabel = lv => lv==="じぶん" ? "♥" : "";
 
-/** 定石とうろく画面：その曜日に登録されている定石だけを並べる */
+/** 出題する定石の画面：その曜日に出す定石だけを並べる */
 function renderReg(){
   const dp=document.getElementById("dayPicker"); dp.innerHTML="";
   DAYS.forEach((d,i)=>{
@@ -3588,7 +3594,7 @@ function renderReg(){
   const ids=(S.weekdays[editDay]||[]).filter(id=>byId[id]);
   const box=document.getElementById("regList"); box.innerHTML="";
   if(!ids.length){
-    box.innerHTML=`<div class="empty">この曜日はまだ空っぽ<br>＋新規定石 から足してね</div>`;
+    box.innerHTML=`<div class="empty">この曜日はまだ空っぽ<br>＋定石を追加 から足してね</div>`;
   }
   for(const id of ids){
     const j=byId[id];
@@ -3924,7 +3930,7 @@ document.getElementById("btnReset").addEventListener("click",async ()=>{
 });
 
 /* =========================================================================
-   9. 新規定石
+   9. 定石を追加
    3つの入口：収録済みからえらぶ／棋譜をはりつけ／盤に打つ
    ========================================================================= */
 let newMode="paste";
