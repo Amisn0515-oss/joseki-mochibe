@@ -729,7 +729,8 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
 /* 自分で足したもの */
 .mv-card.mine{background:linear-gradient(#FFEFF7,#FFD9EA)}
 /* いま見ているもの。自作かどうかより、こちらを優先して見せる */
-.mv-card.now,.mv-card.mine.now{background:var(--band);box-shadow:0 3px 0 var(--band-dk)}
+.mv-card.now,.mv-card.mine.now{background:linear-gradient(#FFE7A6,var(--gold));
+  box-shadow:0 3px 0 var(--gold-dk)}
 
 .mv-thumb{flex-shrink:0;width:62px;height:62px;line-height:0;
   border:2.5px solid var(--outline);border-radius:10px;overflow:hidden;
@@ -768,7 +769,9 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
   background:linear-gradient(var(--panel-2),var(--panel));
   box-shadow:0 3px 0 var(--panel-dk), inset 0 2px 0 rgba(255,255,255,.35)}
 .mv-auto-t{font-family:"Mochiy Pop One",sans-serif;font-size:12.5px;color:#fff;
-  paint-order:stroke fill;-webkit-text-stroke:2px var(--outline)}
+  text-align:left;paint-order:stroke fill;-webkit-text-stroke:2px var(--outline)}
+.mv-auto-t small{display:block;font-family:inherit;font-size:10px;opacity:.9;
+  margin-top:2px;-webkit-text-stroke-width:1.6px}
 .mv-auto-s{flex-shrink:0;width:48px;height:26px;border-radius:99px;position:relative;
   border:2.5px solid var(--outline);background:var(--panel-dk);transition:background .14s}
 .mv-auto-s i{position:absolute;top:1px;left:1px;width:19px;height:19px;border-radius:50%;
@@ -787,6 +790,8 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
 .mv-seq i{font-style:normal;opacity:.45}
 .mv-seq i.done{opacity:1}
 .mv-seq i.now{opacity:1;background:var(--gold);border-radius:6px;padding:0 4px}
+/* つぎに移りますよ、の一行 */
+.mv-nextnote{margin-top:4px;font-weight:700}
 
 /* ── モチのコレクション ─────────────────────────────────── */
 .colgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
@@ -1247,6 +1252,12 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
         <button data-v="views">よく見た順</button>
         <button data-v="len">手数が多い順</button>
       </div>
+      <!-- 見おわったら、つぎの定石に移って続けて再生するかどうか -->
+      <button class="mv-auto" id="mvAuto" role="switch" aria-checked="true">
+        <span class="mv-auto-t">じどうさいせい
+          <small>見おわったら つぎの定石へ</small></span>
+        <span class="mv-auto-s"><i></i></span>
+      </button>
       <div class="hint" id="mvCount"></div>
       <div class="mv-grid" id="mvGrid"></div>
 
@@ -1348,12 +1359,6 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
         <button data-v="420">はやい</button>
       </div>
       <div class="msgbox" id="mvMsg"><div class="s">一覧からえらぶと、ここに手順が出ます</div></div>
-
-      <!-- 自動さいせい。開いたらすぐ動きだすかどうか -->
-      <button class="mv-auto" id="mvAuto" role="switch" aria-checked="true">
-        <span class="mv-auto-t">じどうさいせい</span>
-        <span class="mv-auto-s"><i></i></span>
-      </button>
 
       <div class="panel field" id="mvTagBox" hidden>
         <div class="ribbon out sm">このムービーのタグ</div>
@@ -2116,8 +2121,12 @@ function rebuildMovies(){
 }
 /** ムービーだけに1本足して、そのIDを返す */
 function addMovie(name, kifu){
-  const id="mv"+Date.now().toString(36);
   if(!Array.isArray(S.movies)) S.movies=[];
+  /* 同じミリ秒に2本つくると、時こくだけでは同じ名前になってしまう。
+     すでにあるものと当たらなくなるまで引き直す                     */
+  let id;
+  do{ id="mv"+Date.now().toString(36)+Math.random().toString(36).slice(2,5); }
+  while(byId[id] || S.movies.some(m=>m.id===id));
   S.movies.push({id, n:(name||"").trim() || "なまえのない手順", s:kifu, t:Date.now()});
   save(); rebuildMovies();
   return id;
@@ -4109,7 +4118,27 @@ function mvRecMode(on){
   window.scrollTo(0,0);
 }
 
-function mvStop(){ if(MV.timer){ clearInterval(MV.timer); MV.timer=null; } }
+function mvStop(){
+  if(MV.timer){ clearInterval(MV.timer); MV.timer=null; }
+  if(MV.nextT){ clearTimeout(MV.nextT); MV.nextT=null; }   // つぎへ移る待ちも取り消す
+}
+
+/* ── 見おわったあと ──────────────────────────────────────
+   じどうさいせいが入っていれば、つぎの定石に移って続けて再生する。
+   つぎは「いま見えている一覧の、次の行」。絞りこみも並べ方もそのまま使う。
+   （じぶんタグで絞っていれば、同じタグの次のものに移る）          */
+function mvAfterEnd(){
+  if(!S.mvAuto) return;
+  const items=mvItems();
+  const at=items.findIndex(x=>x.id===MV.jid);
+  if(at<0) return;
+  const next=items[at+1] || items[0];        // 最後まで行ったら、先頭にもどる
+  if(!next || next.id===MV.jid) return;      // 1本しかないときは、そこで止まる
+  document.getElementById("mvMsg").insertAdjacentHTML("beforeend",
+    `<div class="s mv-nextnote">つぎは <b>${next.n}</b></div>`);
+  // 終わりの盤を見る間を置く。すぐ切り替わると、何が起きたか分からない
+  MV.nextT=setTimeout(()=>{ MV.nextT=null; mvLoad(next.id); }, 1400);
+}
 
 function mvLoad(jid){
   mvStop(); MV.jid=jid; MV.k=0;
@@ -4121,7 +4150,7 @@ function mvLoad(jid){
   save();
   mvShow("play");
   mvRender(); mvRenderNext(); mvRenderAuto();
-  if(S.mvAuto) mvPlayPause();        // 切り替わったらすぐ動きだす
+  mvPlayPause();                     // 切り替わったら、かならず動きだす
 }
 
 /** いま見ているムービーのタグを描く */
@@ -4169,7 +4198,7 @@ function mvPlayPause(){
   if(MV.timer){ mvStop(); mvRender(); return; }
   if(MV.k>=j.moves.length) MV.k=0;          // 終わっていたら頭から
   MV.timer=setInterval(()=>{
-    if(MV.k>=j.moves.length){ mvStop(); mvRender(); return; }
+    if(MV.k>=j.moves.length){ mvStop(); mvRender(); mvAfterEnd(); return; }
     MV.k++; mvRender();
   }, MV.speed);
   mvRender();
