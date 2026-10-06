@@ -245,6 +245,12 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
   stroke-linejoin:round;stroke-linecap:round}
 .bookbtn .bcount{display:block;font-family:"Baloo 2",cursive;font-weight:800;
   font-size:11px;line-height:1;color:var(--outline);margin-top:-1px}
+/* ムービーの入口。図鑑と同じ形・同じ大きさで、そのすぐ下に並べる */
+.filmbtn{top:62px}
+.filmbtn svg{width:25px;height:25px;margin-top:4px}
+.filmbtn svg .tri{fill:var(--outline);stroke:none}
+.filmbtn .bcount{font-family:"Mochiy Pop One",sans-serif;font-weight:400;
+  font-size:7.5px;letter-spacing:-.02em;margin-top:1px}
 
 /* モチを何体並べても舞台の高さが変わらないように、下ぞろえで高さを決めておく */
 .arena{display:flex;flex-direction:column;justify-content:flex-end;
@@ -276,7 +282,11 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
   opacity:0;transform:translateY(10px) scale(.9);transition:.28s cubic-bezier(.3,1.5,.6,1)}
 .toast.show{opacity:1;transform:translateY(0) scale(1)}
 
-/* 消えるなど、あとから困ることの注意書き。まぎれないように色を変える */
+/* 消えるなど、あとから困ることの注意書き。まぎれないように色を変える。
+   絵文字は端末まかせの絵が出るので使わず、札で目立たせる            */
+.caution .ctag{display:inline-block;margin-right:6px;padding:1px 8px;border-radius:99px;
+  font-size:10.5px;color:#fff;background:var(--pink-dk);
+  border:2px solid var(--outline);vertical-align:1px}
 .caution{font-size:11.5px;line-height:1.7;color:#5A2742;font-weight:700;
   background:linear-gradient(#FFE6F0,#FFD4E6);
   border:2.5px solid var(--outline);border-radius:12px;padding:7px 10px}
@@ -609,12 +619,12 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
 
 /* ── F5始点メーカー ─────────────────────────────────────── */
 /* アプリのアイコンと同じ、水色→藤→桃のグラデーション */
-#f5maker{background:linear-gradient(#BFE0FF 0%,#DCC9FA 48%,#FFD1E7 100%);
+#f5maker,#mvMaker{background:linear-gradient(#BFE0FF 0%,#DCC9FA 48%,#FFD1E7 100%);
   box-shadow:0 6px 0 #C9A9DE, 0 12px 18px -6px rgba(50,30,95,.4),
              inset 0 3px 0 rgba(255,255,255,.6)}
 /* 明るい地になったので、中の文字は濃い色にする */
-#f5maker .hint{color:var(--outline);opacity:1;text-shadow:none}
-#f5maker .je-label{color:var(--outline);-webkit-text-stroke:0}
+#f5maker .hint,#mvMaker .hint{color:var(--outline);opacity:1;text-shadow:none}
+#f5maker .je-label,#mvMaker .je-label{color:var(--outline);-webkit-text-stroke:0}
 .factory{display:block;width:100%;max-width:280px;height:auto;margin:2px auto 0}
 .factory .smoke circle{animation:puff 2.6s ease-in-out infinite}
 .factory .smoke circle:nth-child(2){animation-delay:.3s}
@@ -934,6 +944,16 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
         </svg>
         <span class="bcount" id="bookCount">0</span>
       </button>
+
+      <!-- ムービーの入口。図鑑と同じ形で、そのすぐ下に置く -->
+      <button class="bookbtn filmbtn" id="btnToMovie" aria-label="定石ムービーを開く">
+        <svg viewBox="0 0 34 34" aria-hidden="true">
+          <rect x="4" y="8" width="26" height="19" rx="5"/>
+          <path d="M9 8v19M25 8v19"/>
+          <path class="tri" d="M14.5 13.5v8l7-4z"/>
+        </svg>
+        <span class="bcount">ムービー</span>
+      </button>
     </div>
 
     <!-- きょうの定石をカードで並べる -->
@@ -967,7 +987,6 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
       <span class="rv-l dim" id="rvCap"></span>
     </button>
 
-    <button class="btn sm lilac" id="btnToMovie">定石ムービー</button>
     <button class="btn sm lilac" id="btnToSet">せってい</button>
 
   </section>
@@ -1027,7 +1046,7 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
       <div class="hint"><b>行を押すと、その定石をいま解けます</b>（曜日に関係なく）。
         鉛筆✎を押すと、その定石のせっていが開きます。<br>
         ここに入っている定石が、その曜日に出題されます。外すとその曜日から消えます。</div>
-      <div class="caution">⚠️ 自分で追加した定石は、<b>すべての曜日から外すと削除されます</b>。
+      <div class="caution"><b class="ctag">ちゅうい</b>自分で追加した定石は、<b>すべての曜日から外すと削除されます</b>。
         手順ごと消えて、もとに戻せません。残したいときは、どこか1つの曜日に入れておいてください。</div>
       <button class="btn sm lilac" id="btnAuto">収録定石を7曜日におまかせで配る</button>
     </div>
@@ -1173,7 +1192,10 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
       <div class="tagbar" id="mvTag"></div>
       <div class="hint" id="mvCount"></div>
       <div class="checks mv-list" id="mvList"></div>
-      <button class="btn sm lilac" id="mvAddOpen">＋ ムービーに足す</button>
+      <div class="rowbar">
+        <button class="btn sm lilac" id="mvAddOpen">＋ ムービーに足す</button>
+        <button class="btn sm lilac" id="mvMakerOpen">始点メーカー</button>
+      </div>
     </div>
 
     <div class="panel field" id="mvAdd" hidden>
@@ -1188,6 +1210,43 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
       </div>
       <button class="btn sm lilac" id="mvAddClose">とじる</button>
       <div class="result" id="mvAddResult" hidden></div>
+    </div>
+
+    <div class="panel field" id="mvMaker" hidden>
+      <div class="ribbon out sm" id="mvMakerTitle">F5始点メーカー</div>
+      <svg class="factory" viewBox="0 0 260 120" aria-hidden="true">
+        <!-- けむり -->
+        <g class="smoke" fill="#FFF3C4">
+          <circle cx="74" cy="30" r="9"/><circle cx="88" cy="18" r="7"/><circle cx="100" cy="9" r="5"/>
+        </g>
+        <!-- 建物 -->
+        <rect x="46" y="46" width="168" height="58" rx="12"
+              fill="#FFDCA6" stroke="#4B3A80" stroke-width="4"/>
+        <rect x="62" y="34" width="18" height="20" rx="5"
+              fill="#FFC2DC" stroke="#4B3A80" stroke-width="4"/>
+        <!-- 窓 -->
+        <circle cx="110" cy="75" r="13" fill="#BFE0FF" stroke="#4B3A80" stroke-width="4"/>
+        <circle cx="150" cy="75" r="13" fill="#CFF2D8" stroke="#4B3A80" stroke-width="4"/>
+        <!-- 入口と出口 -->
+        <rect x="8"  y="66" width="42" height="18" rx="8"
+              fill="#C9B6FF" stroke="#4B3A80" stroke-width="4"/>
+        <rect x="210" y="66" width="42" height="18" rx="8"
+              fill="#7FE6C4" stroke="#4B3A80" stroke-width="4"/>
+        <!-- 出てくる f5 の石 -->
+        <circle class="pop" cx="238" cy="52" r="10" fill="#FFF" stroke="#4B3A80" stroke-width="4"/>
+      </svg>
+      <div class="hint"><b>よそから持ってきた棋譜を、同じ向きにそろえるためのものです。</b><br>
+        <span id="mvMakerHint">初手が f5 でない棋譜を入れると、盤を回して <b>f5始点に直したもの</b>が出てきます。</span>
+        盤の向きが変わるだけなので、手順の中身も強さも変わりません。</div>
+      <input class="tin" id="mvMkName" type="text" placeholder="なまえ（例：きのうの対局）">
+      <textarea class="tin ta" id="mvMkIn" rows="3" placeholder="d3c5f6f3c4..."></textarea>
+      <div class="rowbar">
+        <button class="btn sm pink" id="mvMkPaste">ペースト</button>
+        <button class="btn sm lilac" id="mvMkClear">クリア</button>
+      </div>
+      <button class="btn sm" id="mvMkGo">へんかんする</button>
+      <button class="btn sm lilac" id="mvMakerClose">とじる</button>
+      <div class="result" id="mvMkResult" hidden></div>
     </div>
 
     <div style="height:6px"></div>
@@ -1922,6 +1981,14 @@ let MOVIES=[];
 function rebuildMovies(){
   MOVIES=(S.movies||[]).map(m=>prep(Object.assign({}, m,
     {lv:"じぶん", cat:"じぶん", movieOnly:true})));
+}
+/** ムービーだけに1本足して、そのIDを返す */
+function addMovie(name, kifu){
+  const id="mv"+Date.now().toString(36);
+  if(!Array.isArray(S.movies)) S.movies=[];
+  S.movies.push({id, n:(name||"").trim() || "なまえのない手順", s:kifu});
+  save(); rebuildMovies();
+  return id;
 }
 /** ムービーで選べるもの＝収録＋自作の定石＋ムービー専用 */
 const movieList = () => [...LIB, ...MOVIES];
@@ -3715,6 +3782,7 @@ function mvStop(){ if(MV.timer){ clearInterval(MV.timer); MV.timer=null; } }
 function mvLoad(jid){
   mvStop(); MV.jid=jid; MV.k=0;
   document.getElementById("mvAdd").hidden=true;
+  document.getElementById("mvMaker").hidden=true;
   mvFold(true);                     // えらんだら一覧はたたむ
   mvRenderList(); mvRender();
   window.scrollTo(0,0);
@@ -3751,6 +3819,7 @@ function mvPlayPause(){
 document.getElementById("mvAddOpen").addEventListener("click",()=>{
   const box=document.getElementById("mvAdd");
   box.hidden=!box.hidden;
+  document.getElementById("mvMaker").hidden=true;
   if(!box.hidden){
     document.getElementById("mvKifu").placeholder=spaceKifu("f5d6c5f4e3c6d3f6e6d7");
     box.scrollIntoView({block:"nearest"});
@@ -3762,20 +3831,42 @@ document.getElementById("mvAddClose").addEventListener("click",()=>{
 document.getElementById("mvPasteBtn").addEventListener("click",()=>{
   pasteInto(document.getElementById("mvKifu"), "mvAddResult");
 });
+/* ── ムービーの始点メーカー ── */
+document.getElementById("mvMakerOpen").addEventListener("click",()=>{
+  const box=document.getElementById("mvMaker");
+  box.hidden=!box.hidden;
+  document.getElementById("mvAdd").hidden=true;
+  if(!box.hidden){ refreshPlaceholders(); box.scrollIntoView({block:"nearest"}); }
+});
+document.getElementById("mvMakerClose").addEventListener("click",()=>{
+  document.getElementById("mvMaker").hidden=true;
+});
+document.getElementById("mvMkPaste").addEventListener("click",()=>{
+  pasteInto(document.getElementById("mvMkIn"), "mvMkResult");
+});
+document.getElementById("mvMkClear").addEventListener("click",()=>{
+  document.getElementById("mvMkIn").value="";
+  document.getElementById("mvMkResult").hidden=true;
+});
+document.getElementById("mvMkGo").addEventListener("click",()=>{
+  runMaker("mvMkIn","mvMkResult","この手順をムービーに足す", moves=>{
+    const nm=(document.getElementById("mvMkName").value||"").trim();
+    document.getElementById("mvMkName").value="";
+    document.getElementById("mvMaker").hidden=true;
+    mvLoad(addMovie(nm, moves.join("")));
+  });
+});
+
 document.getElementById("mvAddGo").addEventListener("click",()=>{
   const moves=parseKifu(document.getElementById("mvKifu").value);
   const v=validateMoves(moves);
   if(!v.ok){ showResult("mvAddResult", false, `✕ ${v.msg}`); return; }
-  const nm=(document.getElementById("mvName").value||"").trim() || "なまえのない手順";
-  const id="mv"+Date.now().toString(36);
-  if(!Array.isArray(S.movies)) S.movies=[];
-  S.movies.push({id, n:nm, s:moves.join("")});
-  save(); rebuildMovies();
+  const nm=document.getElementById("mvName").value;
   document.getElementById("mvName").value="";
   document.getElementById("mvKifu").value="";
   document.getElementById("mvAddResult").hidden=true;
   document.getElementById("mvAdd").hidden=true;
-  mvLoad(id);
+  mvLoad(addMovie(nm, moves.join("")));
 });
 
 /* ★と♥が何の数字なのかは、記号だけでは分からない。押したら教える */
@@ -4080,11 +4171,17 @@ function refreshPlaceholders(){
   // メーカーの例は「いまの始点ではないほう」を出すのが分かりやすい
   const f5i=document.getElementById("f5In");
   if(f5i) f5i.placeholder=(ORIGIN==="f5" ? "e6f4e3d6c5" : "f5d6c5f4e3")+"...";
-  const mk=document.getElementById("f5MakerTitle");
-  if(mk) mk.textContent=`${ORIGIN.toUpperCase()}始点メーカー`;
-  const mh=document.getElementById("f5MakerHint");
-  if(mh) mh.innerHTML=`初手が ${ORIGIN} でない棋譜を入れると、盤を回して `
-    +`<b>${ORIGIN}始点に直したもの</b>が出てきます。`;
+  for(const id of ["f5MakerTitle","mvMakerTitle"]){
+    const mk=document.getElementById(id);
+    if(mk) mk.textContent=`${ORIGIN.toUpperCase()}始点メーカー`;
+  }
+  for(const id of ["f5MakerHint","mvMakerHint"]){
+    const mh=document.getElementById(id);
+    if(mh) mh.innerHTML=`初手が ${ORIGIN} でない棋譜を入れると、盤を回して `
+      +`<b>${ORIGIN}始点に直したもの</b>が出てきます。`;
+  }
+  const mki=document.getElementById("mvMkIn");
+  if(mki) mki.placeholder=fKifu("d3c5f6f3c4")+"...";
   const jk=document.getElementById("jeKifu");
   if(jk) jk.placeholder=spaceKifu("f5d6c3d3c4f4");
 }
@@ -4171,30 +4268,39 @@ document.getElementById("btnPasteCheck").addEventListener("click",()=>{
   });
 });
 
-// F5始点メーカー
-document.getElementById("btnF5Go").addEventListener("click",()=>{
-  const moves=parseKifu(document.getElementById("f5In").value);
-  if(!moves.length){ showResult("f5Result",false,"✕ 手順が見つかりませんでした。"); return; }
+/* 始点メーカーの中身。入れる欄・出す場所・できたあとの行き先だけを
+   差しかえて、新規定石とムービーの両方で同じものを使う。          */
+function runMaker(inId, resId, saveLabel, onSave){
+  const moves=parseKifu(document.getElementById(inId).value);
+  if(!moves.length){ showResult(resId,false,"✕ 手順が見つかりませんでした。"); return; }
   const conv=toF5(moves);
-  if(!conv.ok){ showResult("f5Result",false,`✕ ${conv.msg}`); return; }
+  if(!conv.ok){ showResult(resId,false,`✕ ${conv.msg}`); return; }
   const v=validateMoves(conv.moves);
-  if(!v.ok){ showResult("f5Result",false,`✕ ${v.msg}<br>元の棋譜そのものが正しくないようです。`); return; }
+  if(!v.ok){ showResult(resId,false,`✕ ${v.msg}<br>元の棋譜そのものが正しくないようです。`); return; }
   // 中は f5 で持つが、画面には選んだ始点の向きで出す
   const kifu=fKifu(conv.moves.join(""));
-  showResult("f5Result",true,
+  showResult(resId,true,
     (conv.already ? `○ もともと ${originSq()} 始点でした`
                   : `○ ${conv.how} と ${originSq()} 始点になりました`)
     + `<div class="kifuout">${kifu}</div>`
-    + `<button class="btn sm lilac" id="btnF5Copy">コピーする</button>`
-    + `<button class="btn sm" id="btnF5Save" style="margin-top:7px">この手順でとうろく</button>`);
-  document.getElementById("btnF5Copy").addEventListener("click",async (e)=>{
+    + `<button class="btn sm lilac" data-mk="copy">コピーする</button>`
+    + `<button class="btn sm" data-mk="save" style="margin-top:7px">${saveLabel}</button>`);
+  const box=document.getElementById(resId);
+  box.querySelector('[data-mk="copy"]').addEventListener("click",async (e)=>{
     try{ await navigator.clipboard.writeText(kifu); e.target.textContent="コピーしました"; }
     catch(_){ e.target.textContent="コピーできませんでした"; }
   });
-  document.getElementById("btnF5Save").addEventListener("click",()=>{
-    addCustom("", conv.moves);
-    document.getElementById("f5In").value="";
-    document.getElementById("f5Result").hidden=true;
+  box.querySelector('[data-mk="save"]').addEventListener("click",()=>{
+    onSave(conv.moves);
+    document.getElementById(inId).value="";
+    box.hidden=true;
+  });
+}
+
+// F5始点メーカー（新規定石）
+document.getElementById("btnF5Go").addEventListener("click",()=>{
+  runMaker("f5In","f5Result","この手順でとうろく", moves=>{
+    addCustom("", moves);
     renderHome(false); go("reg");
   });
 });
