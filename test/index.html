@@ -699,9 +699,10 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
   box-shadow:0 3px 0 var(--gold-dk)}
 /* ムービーだけに足した手順。消すボタンを右はしに出す */
 .mv-list .chk.mine{background:linear-gradient(#FFEFF7,#FFD9EA)}
-.mv-del{flex-shrink:0;font:inherit;font-size:14px;line-height:1;cursor:pointer;
+.mv-del{flex-shrink:0;font:inherit;font-size:15px;line-height:1;cursor:pointer;
+  min-width:30px;min-height:30px;border-radius:50%;
   background:none;border:0;color:var(--outline);opacity:.6;padding:4px 2px 4px 8px}
-.mv-del:active{opacity:1}
+.mv-del:active{opacity:1;background:rgba(75,58,128,.16)}
 #s-movie.on{gap:7px;padding:8px 10px 6px}
 /* 一覧をたたんだときの、盤以外の合計が約395px。盤はその残り */
 #s-movie .boardframe{width:min(100%, max(230px, calc(100svh - 395px)))}
@@ -1173,10 +1174,24 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
       <div class="boardin"><div class="board" id="mvBoard"></div></div>
     </div>
 
-    <div class="rowbar">
+    <div class="rowbar" id="mvPlayBar">
       <button class="btn sm lilac" id="mvPrev">◀ 1手</button>
       <button class="btn sm" id="mvPlay">さいせい</button>
       <button class="btn sm lilac" id="mvNext">1手 ▶</button>
+    </div>
+
+    <!-- 盤に打って録っている間だけ、ここが操作欄になる -->
+    <div class="field" id="mvRecBar" hidden>
+      <div class="rowbar">
+        <button class="btn sm lilac" id="mvRecUndo">1手もどす</button>
+        <button class="btn sm lilac" id="mvRecClear">ぜんぶ消す</button>
+      </div>
+      <input class="tin" id="mvRecName" type="text" placeholder="なまえ（例：きのうの対局）">
+      <div class="rowbar">
+        <button class="btn sm" id="mvRecSave">この手順を録る</button>
+        <button class="btn sm lilac" id="mvRecStop">やめる</button>
+      </div>
+      <div class="result" id="mvRecResult" hidden></div>
     </div>
     <div class="seg" id="mvSpeed">
       <button data-v="1400">ゆっくり</button>
@@ -1184,6 +1199,7 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
       <button data-v="420">はやい</button>
     </div>
     <div class="msgbox" id="mvMsg"><div class="s">下の一覧から定石をえらぶと、ここに手順が出ます</div></div>
+    <button class="btn sm pink" id="mvDelNow" hidden>このムービーを消す</button>
 
     <div class="panel field" id="mvPick">
       <button class="ribbon out sm mv-toggle" id="mvPickToggle">どの定石を見る？</button>
@@ -1191,9 +1207,10 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
       <div class="hint" id="mvCount"></div>
       <div class="checks mv-list" id="mvList"></div>
       <div class="rowbar">
-        <button class="btn sm lilac" id="mvAddOpen">＋ ムービーに足す</button>
-        <button class="btn sm lilac" id="mvMakerOpen">始点メーカー</button>
+        <button class="btn sm lilac" id="mvRecOpen">盤に打って録る</button>
+        <button class="btn sm lilac" id="mvAddOpen">棋譜をはりつけ</button>
       </div>
+      <button class="btn sm lilac" id="mvMakerOpen">始点メーカー</button>
     </div>
 
     <div class="panel field" id="mvAdd" hidden>
@@ -3705,6 +3722,8 @@ document.getElementById("btnBkIn").addEventListener("click",async ()=>{
    いま何手目まで進んだかを MV.k で持つ。盤は定石データの各局面を
    そのまま描くだけなので、計算はいらない。                          */
 const MV={jid:null, k:0, timer:null, speed:800, tag:"すべて"};
+/* 盤に打って録っている間の手順。録り終えるまで、どこにも残さない */
+const MVREC={on:false, moves:[]};
 
 
 /** 一覧を描く。けいとうでしぼりこめる */
@@ -3757,10 +3776,14 @@ function mvRenderSpeed(){
 function mvRender(){
   // まだムービーの盤を作っていないときは、描くものがない
   if(!document.getElementById("mvBoard").children.length) return;
+  if(MVREC.on){ mvRecRender(); return; }      // 録っている間は、打った手を映す
   const j=movieById(MV.jid);
   if(!j){
     paintIn("mvBoard", startBoard(), null);
     document.getElementById("mvTurn").innerHTML="定石をえらんでください";
+    document.getElementById("mvDelNow").hidden=true;   // 消すものが無い
+    document.getElementById("mvMsg").innerHTML=
+      `<div class="s">下の一覧から定石をえらぶと、ここに手順が出ます</div>`;
     return;
   }
   const k=Math.max(0, Math.min(MV.k, j.moves.length));
@@ -3780,6 +3803,57 @@ function mvRender(){
     `<div class="mv-seq">${seq}</div>`
     + (last && j.note ? `<div class="s">${j.note}</div>` : "");
   document.getElementById("mvPlay").textContent = MV.timer ? "とめる" : "さいせい";
+  // 自分で足したものだけ、ここから消せる
+  document.getElementById("mvDelNow").hidden = !j.movieOnly;
+}
+
+/* ── 盤に打って録る ──────────────────────────────────────
+   新規定石の「盤に打ってつくる」と同じ考え方。盤はムービーのものを
+   そのまま使う。録っている間は、再生のかわりに打った手を映す。     */
+function mvRecRender(){
+  const st=playOut(MVREC.moves);
+  // 1手目は f5 だけ。盤の向きをそろえるため、ここから始めてもらう
+  paintIn("mvBoard", st.board, MVREC.moves[MVREC.moves.length-1]||null, st.player,
+          MVREC.moves.length===0 ? "f5" : null);
+  const black=st.player===1;
+  document.getElementById("mvTurn").innerHTML=
+    `<span class="d ${black?"b":"w"}"></span>${black?"くろ":"しろ"}の番　`
+    +`${MVREC.moves.length+1}手目`;
+  document.getElementById("mvMsg").innerHTML = MVREC.moves.length
+    ? `<div class="seq">${MVREC.moves.map(fSq).join(" ")}</div>`
+    : `<div class="s">盤を押して、手順を打っていってください</div>`;
+}
+/** 録っている盤を押したとき。打てないマスは黙って無視する */
+function mvRecPlay(r,c){
+  if(!MVREC.on) return;
+  const st=playOut(MVREC.moves);
+  if(!flips(st.board,r,c,st.player).length) return;
+  const sq=toSq(r,c);
+  if(MVREC.moves.length===0 && sq!=="f5"){
+    showResult("mvRecResult", false,
+      `✕ 1手目は <b>${originSq()}</b> からです。`
+      +`<br>盤の向きをそろえるため、ここでは ${originSq()} 始点だけを受け付けます。`);
+    return;
+  }
+  document.getElementById("mvRecResult").hidden=true;
+  MVREC.moves.push(sq);
+  mvRecRender();
+}
+/** 録るのを始める・やめる */
+function mvRecMode(on){
+  MVREC.on=on;
+  if(on){ mvStop(); MVREC.moves=[]; }
+  document.getElementById("mvRecBar").hidden=!on;
+  document.getElementById("mvPlayBar").hidden=on;
+  document.getElementById("mvSpeed").hidden=on;
+  document.getElementById("mvPick").hidden=on;
+  document.getElementById("mvAdd").hidden=true;
+  document.getElementById("mvMaker").hidden=true;
+  document.getElementById("mvDelNow").hidden=true;
+  document.getElementById("mvRecResult").hidden=true;
+  if(!on) document.getElementById("mvRecName").value="";
+  mvRender();
+  window.scrollTo(0,0);
 }
 
 function mvStop(){ if(MV.timer){ clearInterval(MV.timer); MV.timer=null; } }
@@ -3836,6 +3910,34 @@ document.getElementById("mvAddClose").addEventListener("click",()=>{
 document.getElementById("mvPasteBtn").addEventListener("click",()=>{
   pasteInto(document.getElementById("mvKifu"), "mvAddResult");
 });
+/* ── 盤に打って録る ── */
+document.getElementById("mvRecOpen").addEventListener("click",()=>mvRecMode(true));
+document.getElementById("mvRecStop").addEventListener("click",()=>mvRecMode(false));
+document.getElementById("mvRecUndo").addEventListener("click",()=>{
+  MVREC.moves.pop(); document.getElementById("mvRecResult").hidden=true; mvRecRender();
+});
+document.getElementById("mvRecClear").addEventListener("click",()=>{
+  MVREC.moves=[]; document.getElementById("mvRecResult").hidden=true; mvRecRender();
+});
+document.getElementById("mvRecSave").addEventListener("click",()=>{
+  const v=validateMoves(MVREC.moves);
+  if(!v.ok){ showResult("mvRecResult", false, `✕ ${v.msg}`); return; }
+  const id=addMovie(document.getElementById("mvRecName").value, MVREC.moves.join(""));
+  mvRecMode(false);
+  mvLoad(id);
+});
+
+/* ── いま見ているムービーを消す ── */
+document.getElementById("mvDelNow").addEventListener("click",async ()=>{
+  const j=movieById(MV.jid); if(!j || !j.movieOnly) return;
+  const ok=await ask("このムービーをけしますか",
+    `<b>${j.n}</b> を消します。もとに戻せません。`, "けす", true);
+  if(!ok) return;
+  S.movies=(S.movies||[]).filter(m=>m.id!==j.id);
+  MV.jid=null; MV.k=0;
+  save(); rebuildMovies(); mvFold(false); mvRenderList(); mvRender();
+});
+
 /* ── ムービーの始点メーカー ── */
 document.getElementById("mvMakerOpen").addEventListener("click",()=>{
   const box=document.getElementById("mvMaker");
@@ -3883,10 +3985,11 @@ document.getElementById("coinStreak").addEventListener("click",()=>
 document.getElementById("btnToMovie").addEventListener("click",()=>{
   go("movie");
   if(!document.getElementById("mvBoard").children.length)
-    buildBoardDom("mvFiles","mvRanks","mvBoard",()=>{});   // 見るだけなので押しても何もしない
+    buildBoardDom("mvFiles","mvRanks","mvBoard",mvRecPlay);   // 録るときだけ受け付ける
   mvRenderList(); mvRenderSpeed(); mvRender();
 });
-document.getElementById("btnMovieBack").addEventListener("click",()=>{ mvStop(); go("home"); });
+document.getElementById("btnMovieBack").addEventListener("click",()=>{
+  mvStop(); if(MVREC.on) mvRecMode(false); go("home"); });
 document.getElementById("mvPrev").addEventListener("click",()=>{ mvStop(); mvStep(-1); });
 document.getElementById("mvNext").addEventListener("click",()=>{ mvStop(); mvStep(1); });
 document.getElementById("mvPlay").addEventListener("click",mvPlayPause);
@@ -4469,9 +4572,10 @@ function renderLibList(){
 let NB={moves:[]};
 
 /** 手順から現在の盤面と手番を作り直す */
-function nbState(){
+/** 手順を最後まで打った局面と、次の番。パスも見る */
+function playOut(moves){
   let b=startBoard(), p=1;
-  for(const m of NB.moves){
+  for(const m of moves){
     if(!hasMove(b,p)) p=3-p;
     const [r,c]=toRC(m), f=flips(b,r,c,p);
     b[r][c]=p; for(const [rr,cc] of f) b[rr][cc]=p;
@@ -4480,6 +4584,7 @@ function nbState(){
   if(!hasMove(b,p)) p=3-p;
   return {board:b, player:p};
 }
+function nbState(){ return playOut(NB.moves); }
 function nbRender(){
   const st=nbState();
   // 1手目は f5 だけ。盤の向きをそろえるため、ここから始めてもらう
