@@ -281,6 +281,19 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
 :root[data-theme="dark"] .caution{color:#3A1228}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .caution{color:#3A1228}}
 
+/* 日めくりの見出し。左右の三角で曜日を送る */
+.ribbon.daybar{display:flex;align-items:center;gap:4px;padding:3px 8px}
+.daynav{font:inherit;cursor:pointer;flex-shrink:0;
+  width:28px;height:28px;display:grid;place-items:center;
+  background:none;border:0;padding:0;border-radius:50%}
+.daynav svg{width:19px;height:19px;fill:none;stroke:var(--outline);
+  stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
+.daynav:active{background:rgba(75,58,128,.16)}
+/* きょう以外を見ているとき、見出しの色を変えて気づけるようにする */
+.ribbon.daybar.away{background:linear-gradient(#DCCCFF,var(--lilac));
+  box-shadow:0 4px 0 var(--lilac-dk), inset 0 2px 0 rgba(255,255,255,.6)}
+#btnToday{margin-top:9px}
+
 /* 復習の入口。見出しの下に、拾ったものを2行で見せる */
 .btn.review{display:flex;flex-direction:column;align-items:center;gap:3px;
   padding:12px 12px 11px}
@@ -923,10 +936,19 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
 
     <!-- きょうの定石をカードで並べる -->
     <div class="panel">
-      <div class="ribbon out sm" id="ribDay">きょうの定石</div>
+      <div class="ribbon out sm daybar">
+        <button class="daynav" id="dayPrev" aria-label="前の曜日">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 8 12l7 7"/></svg>
+        </button>
+        <span id="ribDay">きょうの定石</span>
+        <button class="daynav" id="dayNext" aria-label="次の曜日">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+        </button>
+      </div>
       <div class="cardgrid" id="todayGrid"></div>
-      <div class="hint daynote">曜日ごとに、その日に出す定石が決めてあります。
+      <div class="hint daynote" id="dayNote">曜日ごとに、その日に出す定石が決めてあります。
         中身を変えるときは下の「出題する定石」から。</div>
+      <button class="btn sm lilac" id="btnToday" hidden>きょうに戻る</button>
     </div>
 
     <button class="btn big" id="btnStart">くいずをとく</button>
@@ -2985,6 +3007,17 @@ function todayIds(){
   const d=new Date().getDay();
   return (S.weekdays[d]||[]).filter(id=>byId[id]);   // 登録されているものがそのまま出る
 }
+/* ホームで見ている曜日。保存しない。
+   覚えてしまうと、次に開いたとき別の曜日のまま気づかずに解いてしまう */
+let viewDay=new Date().getDay();
+const isToday = () => viewDay===new Date().getDay();
+/** いま見ている曜日の定石 */
+function viewIds(){ return (S.weekdays[viewDay]||[]).filter(id=>byId[id]); }
+/** 曜日を送る。日曜の前は土曜に回る */
+function moveDay(step){
+  viewDay=(viewDay+step+7)%7;
+  renderHome(false);
+}
 
 /** その定石を何手目から出すか（1＝初手から）。定石ごとに持つ */
 function startAtOf(j){
@@ -3103,13 +3136,22 @@ function renderHome(animate){
   document.getElementById("hudStreak").textContent=S.streak;
   renderReview();
 
-  const d=new Date().getDay();
-  // 何本あるのかが分からないと、きょうの量が見当つかない
-  const nToday=(S.weekdays[d]||[]).filter(id=>byId[id]).length;
+  // 何本あるのかが分からないと、その日の量が見当つかない
+  const ids=viewIds();
   document.getElementById("ribDay").textContent =
-    nToday ? `${DAYS[d]}曜日の定石　${nToday}本` : `${DAYS[d]}曜日の定石`;
+    ids.length ? `${DAYS[viewDay]}曜日の定石　${ids.length}本` : `${DAYS[viewDay]}曜日の定石`;
+  // きょう以外を見ているときは、見た目と文章の両方で知らせる
+  const away=!isToday();
+  document.querySelector(".daybar").classList.toggle("away", away);
+  document.getElementById("btnToday").hidden=!away;
+  document.getElementById("dayNote").innerHTML = away
+    ? `いまは<b>${DAYS[viewDay]}曜日</b>のぶんを見ています`
+      + `（きょうは${DAYS[new Date().getDay()]}曜日）。`
+      + `このまま解けます。ホームを開き直すと、きょうに戻ります。`
+    : `曜日ごとに、その日に出す定石が決めてあります。`
+      + `<br>左右の 〈 〉 で、ほかの曜日も見られます。`;
 
-  const ids=todayIds(), grid=document.getElementById("todayGrid");
+  const grid=document.getElementById("todayGrid");
   grid.innerHTML="";
   if(!ids.length){
     grid.innerHTML=`<div class="empty">この曜日はまだ空っぽ<br>出題する定石 から選んでね</div>`;
@@ -3132,8 +3174,11 @@ function renderHome(animate){
   const btn=document.getElementById("btnStart");
   btn.disabled=!ids.length;
   if(ids.length){
-    const list=buildQueue(), at=resumeIndex(list);
-    btn.textContent = at>0 ? `つづきから（${at+1}問め）` : "くいずをとく";
+    // 見ている曜日のぶんで数える。きょう以外のときは、どの曜日かを名前で出す
+    const at=resumeIndex(buildQueue(ids));
+    btn.textContent = away
+      ? (at>0 ? `${DAYS[viewDay]}曜日をつづきから` : `${DAYS[viewDay]}曜日を解く`)
+      : (at>0 ? `つづきから（${at+1}問め）`        : "くいずをとく");
   }else{
     btn.textContent="くいずをとく";
   }
@@ -3459,7 +3504,7 @@ function go(name){
   const lit = (name==="set"||name==="movie") ? "home" : (name==="new" ? "reg" : name);
   for(const t of document.querySelectorAll(".tab")) t.setAttribute("aria-selected", t.dataset.s===lit);
   window.scrollTo(0,0);
-  if(name==="home") renderHome(false);
+  if(name==="home"){ viewDay=new Date().getDay(); renderHome(false); }
   if(name==="reg")  renderReg();
   if(name==="new")  renderNew();
   if(name==="set")  renderSet();
@@ -3478,7 +3523,14 @@ function startQuiz(ids){
 /* startQuiz(ids) は引数を取る。関数をそのまま渡すと、クリックの情報が
    ids として入ってしまい、中の for...of で落ちてボタンが効かなくなる。
    かならず包んで、引数なしで呼ぶこと。                                */
-document.getElementById("btnStart").addEventListener("click",()=>startQuiz());
+/* 大ボタンは、いま見ている曜日を解く。きょうなら いつもどおり */
+document.getElementById("btnStart").addEventListener("click",
+  ()=>startQuiz(isToday() ? null : viewIds()));
+document.getElementById("dayPrev").addEventListener("click",()=>moveDay(-1));
+document.getElementById("dayNext").addEventListener("click",()=>moveDay(1));
+document.getElementById("btnToday").addEventListener("click",()=>{
+  viewDay=new Date().getDay(); renderHome(false);
+});
 /* 復習は、曜日に関係なく弱点だけを出す。中身は reviewIds が決める */
 document.getElementById("btnReview").addEventListener("click",()=>startQuiz(reviewIds()));
 /* ── バックアップ ──────────────────────────────────────────
