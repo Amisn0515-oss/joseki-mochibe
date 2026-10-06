@@ -44,6 +44,10 @@
   --stone-w1:#FFFFFF; --stone-w2:#FFE6F2;              /* 白石（ほんのり桃） */
   --ok:#3FB795; --ng:#F0709B;
   --star:#FFEFB5;
+  /* 定石名の帯のグラデーション。桃→藤→水→若草。
+     横に長いところで効くので、帯・大ボタン・進みの帯で使う */
+  --band:linear-gradient(90deg,#FFC9E4 0%,#E4CDFF 38%,#CDE3FF 68%,#BFF0DE 100%);
+  --band-dk:#C9A9DE;
 }
 /* --- よるのゆめ --------------------------------------------------------- */
 /* 「システムにあわせる」人にはこちら。light を明示した人は除外する */
@@ -164,9 +168,15 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
              inset 0 3px 0 rgba(255,255,255,.65)}
 .btn.lilac:active{box-shadow:0 1px 0 var(--lilac-dk), inset 0 3px 0 rgba(255,255,255,.65)}
 .btn.sm{font-size:14px;padding:11px 12px;border-radius:15px;-webkit-text-stroke-width:2.2px}
-/* 大ボタンは斜めの光沢を1本流す */
+/* 大ボタンは斜めの光沢を1本流す。
+   地は、定石名の帯と同じグラデーション。いちばん押すボタンなので、
+   いちばん華やかなものを当てる                                      */
 .btn.big{font-size:20px;padding:17px;overflow:hidden;position:relative;
-  -webkit-text-stroke-width:3.2px}
+  -webkit-text-stroke-width:3.2px;
+  background:var(--band);
+  box-shadow:0 7px 0 var(--band-dk), 0 13px 16px -6px rgba(50,30,95,.4),
+             inset 0 3px 0 rgba(255,255,255,.65)}
+.btn.big:active{box-shadow:0 1px 0 var(--band-dk), inset 0 3px 0 rgba(255,255,255,.65)}
 .btn.big::after{content:"";position:absolute;top:-60%;left:-30%;width:26%;height:220%;
   background:linear-gradient(90deg,transparent,rgba(255,255,255,.75),transparent);
   transform:rotate(18deg); animation:shine 3.6s ease-in-out infinite}
@@ -194,7 +204,7 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
     background:var(--panel-dk);
     box-shadow:0 3px 0 rgba(0,0,0,.16), inset 0 2px 4px rgba(0,0,0,.3)}
 .xp i{display:block;height:100%;border-radius:99px;
-      background:linear-gradient(var(--star),var(--gold));
+      background:var(--band);
       box-shadow:inset 0 2px 0 rgba(255,255,255,.75);
       transition:width .45s cubic-bezier(.3,1.3,.6,1)}
 .xp span{position:absolute;inset:0;display:grid;place-items:center;font-size:10.5px;
@@ -557,6 +567,7 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
 .tgchip.nezumi{background:#D9E7FF}
 .tgchip.rose {background:#F2CFFF}
 .tgchip.hoka {background:#E6E1F0}
+.tgchip.jibun{background:#FFC2DC}
 /* 取り方。白の1手目がどの向きに返すかで3つ */
 .tgchip.tate  {background:#D9E7FF}
 .tgchip.naname{background:#FFE0C2}
@@ -715,10 +726,10 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
 .mv-card:active{transform:translateY(3px);box-shadow:0 1px 0 var(--paper-dk)}
 :root[data-theme="dark"] .mv-card{color:#F1E9FF}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .mv-card{color:#F1E9FF}}
-/* いま見ているもの */
-.mv-card.now{background:linear-gradient(#FFE7A6,var(--gold));box-shadow:0 3px 0 var(--gold-dk)}
 /* 自分で足したもの */
 .mv-card.mine{background:linear-gradient(#FFEFF7,#FFD9EA)}
+/* いま見ているもの。自作かどうかより、こちらを優先して見せる */
+.mv-card.now,.mv-card.mine.now{background:var(--band);box-shadow:0 3px 0 var(--band-dk)}
 
 .mv-thumb{flex-shrink:0;width:62px;height:62px;line-height:0;
   border:2.5px solid var(--outline);border-radius:10px;overflow:hidden;
@@ -846,7 +857,7 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
 .nameband[hidden]{display:none}
 .nameband .band{display:flex;align-items:center;justify-content:center;gap:12px;
   padding:11px 22px;
-  background:linear-gradient(90deg,#FFC9E4 0%,#E4CDFF 38%,#CDE3FF 68%,#BFF0DE 100%);
+  background:var(--band);
   border-top:3px solid var(--outline);border-bottom:3px solid var(--outline);
   box-shadow:0 8px 22px -6px rgba(60,35,110,.5),
              inset 0 3px 0 rgba(255,255,255,.7),
@@ -3926,7 +3937,7 @@ function mvCard(j){
     +  `<span class="mv-name">${j.n}</span>`
     +  `<span class="mv-sub">`
     +    `<span class="tgchip ${toriClass(toriOf(j))}">${toriOf(j)}</span>`
-    +    (j.movieOnly ? `<span class="tgchip hoka">じぶん</span>` : "")
+    +    (j.movieOnly ? `<span class="tgchip jibun">じぶん</span>` : "")
     +    tagsOfMovie(j.id).map(t=>`<span class="tgchip mine"><b>${t}</b></span>`).join("")
     +    `<span class="mv-num">${j.moves.length}手</span>`
     +    `<span class="mv-num">${views ? views+"回見た" : "まだ見ていない"}</span>`
