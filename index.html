@@ -559,6 +559,10 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
 .tgchip.nezumi{background:#D9E7FF}
 .tgchip.rose {background:#F2CFFF}
 .tgchip.hoka {background:#E6E1F0}
+/* 取り方。白の1手目がどの向きに返すかで3つ */
+.tgchip.tate  {background:#D9E7FF}
+.tgchip.naname{background:#FFE0C2}
+.tgchip.heiko {background:#CFF2D8}
 .lvchip{font-size:10px;padding:1px 8px;border-radius:99px;flex-shrink:0;color:#fff;
   border:2.5px solid var(--outline);font-family:"Mochiy Pop One",sans-serif;
   paint-order:stroke fill;-webkit-text-stroke:1.6px var(--outline);
@@ -3841,6 +3845,14 @@ function boardThumb(j){
        + `<path class="tl" d="${ln}"/>${st}</svg>`;
 }
 
+/* ── 取り方 ──────────────────────────────────────────────
+   白の1手目が、黒石をどの向きに返すかで3つに分かれる。
+   どれになるかは棋譜だけで決まるので、自分で足した手順にも付く。  */
+const TORI={d6:"たてどり", f6:"ななめ", f4:"へいこう"};
+const TORIS=["たてどり","ななめ","へいこう"];
+function toriOf(j){ return TORI[(j.moves||[])[1]] || ""; }
+const toriClass = t => t==="たてどり" ? "tate" : t==="ななめ" ? "naname" : "heiko";
+
 /* ── 自分で付けたタグ ────────────────────────────────────
    けいとう（うさぎ・とら…）は収録ぶんの分類なので、そのまま使えない。
    自分のタグは別に持ち、札では u: を付けて見分ける。              */
@@ -3871,7 +3883,7 @@ function mvItems(){
     const want=MV.tag.slice(2);
     list=list.filter(j=>tagsOfMovie(j.id).includes(want));
   }
-  else if(MV.tag!=="すべて")      list=list.filter(j=>tagOf(j)===MV.tag);
+  else if(TORIS.includes(MV.tag)) list=list.filter(j=>toriOf(j)===MV.tag);
   const v=id=>(S.views||{})[id]||0;
   if(S.mvSort==="views")     list=[...list].sort((a,b)=>v(b.id)-v(a.id));
   else if(S.mvSort==="len")  list=[...list].sort((a,b)=>b.moves.length-a.moves.length);
@@ -3908,7 +3920,8 @@ function mvCard(j){
     +`<span class="mv-meta">`
     +  `<span class="mv-name">${j.n}</span>`
     +  `<span class="mv-sub">`
-    +    (j.movieOnly ? `<span class="tgchip hoka">じぶん</span>` : tagChip(j))
+    +    `<span class="tgchip ${toriClass(toriOf(j))}">${toriOf(j)}</span>`
+    +    (j.movieOnly ? `<span class="tgchip hoka">じぶん</span>` : "")
     +    tagsOfMovie(j.id).map(t=>`<span class="tgchip mine"><b>${t}</b></span>`).join("")
     +    `<span class="mv-num">${j.moves.length}手</span>`
     +    `<span class="mv-num">${views ? views+"回見た" : "まだ見ていない"}</span>`
@@ -3933,7 +3946,7 @@ function mvRenderList(){
   if(MV.tag.startsWith("u:") && !userTags().includes(MV.tag.slice(2))) MV.tag="すべて";
   const bar=document.getElementById("mvTag"); bar.innerHTML="";
   const myTags=userTags().map(t=>"u:"+t);
-  for(const t of ["すべて", "じぶん", ...myTags, ...TAGS]){
+  for(const t of ["すべて", "じぶん", ...myTags, ...TORIS]){
     const b=document.createElement("button");
     b.textContent = tagLabel(t);
     if(t.startsWith("u:")) b.className="mytag";
