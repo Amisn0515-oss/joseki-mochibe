@@ -1146,6 +1146,26 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
       <div class="out sm qtitle">定石ムービー</div>
     </div>
 
+    <div class="turnpill" id="mvTurn"><span class="d b"></span>定石をえらんでください</div>
+
+    <div class="boardframe">
+      <div class="files" id="mvFiles"></div>
+      <div class="ranks" id="mvRanks"></div>
+      <div class="boardin"><div class="board" id="mvBoard"></div></div>
+    </div>
+
+    <div class="rowbar">
+      <button class="btn sm lilac" id="mvPrev">◀ 1手</button>
+      <button class="btn sm" id="mvPlay">さいせい</button>
+      <button class="btn sm lilac" id="mvNext">1手 ▶</button>
+    </div>
+    <div class="seg" id="mvSpeed">
+      <button data-v="1400">ゆっくり</button>
+      <button data-v="800">ふつう</button>
+      <button data-v="420">はやい</button>
+    </div>
+    <div class="msgbox" id="mvMsg"><div class="s">下の一覧から定石をえらぶと、ここに手順が出ます</div></div>
+
     <div class="panel field" id="mvPick">
       <button class="ribbon out sm mv-toggle" id="mvPickToggle">どの定石を見る？</button>
       <div class="tagbar" id="mvTag"></div>
@@ -1168,25 +1188,6 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
       <div class="result" id="mvAddResult" hidden></div>
     </div>
 
-    <div class="turnpill" id="mvTurn"><span class="d b"></span>定石をえらんでください</div>
-
-    <div class="boardframe">
-      <div class="files" id="mvFiles"></div>
-      <div class="ranks" id="mvRanks"></div>
-      <div class="boardin"><div class="board" id="mvBoard"></div></div>
-    </div>
-
-    <div class="rowbar">
-      <button class="btn sm lilac" id="mvPrev">◀ 1手</button>
-      <button class="btn sm" id="mvPlay">さいせい</button>
-      <button class="btn sm lilac" id="mvNext">1手 ▶</button>
-    </div>
-    <div class="seg" id="mvSpeed">
-      <button data-v="1400">ゆっくり</button>
-      <button data-v="800">ふつう</button>
-      <button data-v="420">はやい</button>
-    </div>
-    <div class="msgbox" id="mvMsg"><div class="s">上の一覧から定石をえらぶと、ここに手順が出ます</div></div>
     <div style="height:6px"></div>
   </section>
 
@@ -3730,7 +3731,7 @@ function mvFold(fold){
   pick.classList.toggle("folded", fold);
   const j=movieById(MV.jid);
   document.getElementById("mvPickToggle").textContent =
-    fold && j ? `${j.n} ▼` : "どの定石を見る？";
+    fold && j ? `${j.n} ▲` : "どの定石を見る？";
 }
 
 function mvStep(d){
