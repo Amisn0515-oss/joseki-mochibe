@@ -735,6 +735,17 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
   color:var(--outline);opacity:.55}
 .mv-del:active{opacity:1;background:rgba(75,58,128,.16)}
 
+/* 自分で付けたタグ */
+.mv-tags{display:flex;flex-wrap:wrap;gap:6px;min-height:26px;align-items:center}
+.mv-tags .none{font-size:11.5px;color:#fff;opacity:.85;text-shadow:0 1px 0 rgba(40,25,80,.5)}
+.tgchip.mine{background:#FFD9EA;display:inline-flex;align-items:center;gap:4px;
+  font-size:11px;padding:3px 4px 3px 9px}
+.tgchip.mine b{font-weight:800}
+.tgchip.mine i{font-style:normal;cursor:pointer;width:18px;height:18px;border-radius:50%;
+  display:grid;place-items:center;opacity:.6}
+.tgchip.mine i:active{opacity:1;background:rgba(75,58,128,.2)}
+#mvTagBox .rowbar .tin{flex:2;min-width:0;font-size:14px;padding:9px 11px}
+
 /* 自動さいせいのつまみ */
 .mv-auto{display:flex;align-items:center;justify-content:space-between;gap:10px;
   width:100%;font:inherit;cursor:pointer;padding:8px 12px;border-radius:14px;
@@ -1328,6 +1339,18 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
         <span class="mv-auto-t">じどうさいせい</span>
         <span class="mv-auto-s"><i></i></span>
       </button>
+
+      <div class="panel field" id="mvTagBox" hidden>
+        <div class="ribbon out sm">このムービーのタグ</div>
+        <div class="mv-tags" id="mvTagList"></div>
+        <div class="rowbar">
+          <input class="tin" id="mvTagIn" type="text" maxlength="12"
+                 placeholder="例：本戦、ぎんなん杯">
+          <button class="btn sm" id="mvTagAdd">つける</button>
+        </div>
+        <div class="hint">付けたタグは、一覧の上の札になります。
+          そこを押すと、そのタグの手順だけが集まります。</div>
+      </div>
 
       <button class="btn sm pink" id="mvDelNow" hidden>このムービーを消す</button>
 
@@ -3823,6 +3846,23 @@ function boardThumb(j){
        + `<path class="tl" d="${ln}"/>${st}</svg>`;
 }
 
+/* ── 自分で付けたタグ ────────────────────────────────────
+   けいとう（うさぎ・とら…）は収録ぶんの分類なので、そのまま使えない。
+   自分のタグは別に持ち、札では u: を付けて見分ける。              */
+/** いま使われている自分のタグを、ぜんぶ集めて並べる */
+function userTags(){
+  const set=new Set();
+  for(const m of (S.movies||[])) for(const t of (m.tags||[])) set.add(t);
+  return [...set].sort((a,b)=>a.localeCompare(b,"ja"));
+}
+/** そのムービーに付いているタグ */
+function tagsOfMovie(id){
+  const m=(S.movies||[]).find(x=>x.id===id);
+  return (m && m.tags) ? m.tags : [];
+}
+/** 札に出す名前。u: は自分のタグ */
+const tagLabel = t => t==="すべて" ? "ぜんぶ" : (t.startsWith("u:") ? t.slice(2) : t);
+
 /** 一覧に出すものを、絞って並べて返す */
 /** 足した時こく。古いものには残っていないので、並び順で代用する */
 function addedAt(j, i){
@@ -3831,8 +3871,12 @@ function addedAt(j, i){
 }
 function mvItems(){
   let list=movieList();
-  if(MV.tag==="じぶん")      list=list.filter(j=>j.movieOnly);
-  else if(MV.tag!=="すべて") list=list.filter(j=>tagOf(j)===MV.tag);
+  if(MV.tag==="じぶん")           list=list.filter(j=>j.movieOnly);
+  else if(MV.tag.startsWith("u:")){
+    const want=MV.tag.slice(2);
+    list=list.filter(j=>tagsOfMovie(j.id).includes(want));
+  }
+  else if(MV.tag!=="すべて")      list=list.filter(j=>tagOf(j)===MV.tag);
   const v=id=>(S.views||{})[id]||0;
   if(S.mvSort==="views")     list=[...list].sort((a,b)=>v(b.id)-v(a.id));
   else if(S.mvSort==="len")  list=[...list].sort((a,b)=>b.moves.length-a.moves.length);
@@ -3870,6 +3914,7 @@ function mvCard(j){
     +  `<span class="mv-name">${j.n}</span>`
     +  `<span class="mv-sub">`
     +    (j.movieOnly ? `<span class="tgchip hoka">じぶん</span>` : tagChip(j))
+    +    tagsOfMovie(j.id).map(t=>`<span class="tgchip mine"><b>${t}</b></span>`).join("")
     +    `<span class="mv-num">${j.moves.length}手</span>`
     +    `<span class="mv-num">${views ? views+"回見た" : "まだ見ていない"}</span>`
     +  `</span>`
@@ -3889,10 +3934,14 @@ function mvCard(j){
 
 /** 一覧を描く */
 function mvRenderList(){
+  // 消したタグで絞ったままだと、何も出ない画面で止まってしまう
+  if(MV.tag.startsWith("u:") && !userTags().includes(MV.tag.slice(2))) MV.tag="すべて";
   const bar=document.getElementById("mvTag"); bar.innerHTML="";
-  for(const t of ["すべて", "じぶん", ...TAGS]){
+  const myTags=userTags().map(t=>"u:"+t);
+  for(const t of ["すべて", "じぶん", ...myTags, ...TAGS]){
     const b=document.createElement("button");
-    b.textContent = t==="すべて" ? "ぜんぶ" : t;
+    b.textContent = tagLabel(t);
+    if(t.startsWith("u:")) b.className="mytag";
     b.setAttribute("aria-pressed", t===MV.tag);
     b.addEventListener("click",()=>{ MV.tag=t; mvRenderList(); });
     bar.appendChild(b);
@@ -3957,6 +4006,7 @@ function mvRender(){
     paintIn("mvBoard", startBoard(), null);
     document.getElementById("mvTurn").innerHTML="定石をえらんでください";
     document.getElementById("mvDelNow").hidden=true;   // 消すものが無い
+    document.getElementById("mvTagBox").hidden=true;
     document.getElementById("mvMsg").innerHTML=
       `<div class="s">下の一覧から定石をえらぶと、ここに手順が出ます</div>`;
     return;
@@ -3978,8 +4028,10 @@ function mvRender(){
     `<div class="mv-seq">${seq}</div>`
     + (last && j.note ? `<div class="s">${j.note}</div>` : "");
   document.getElementById("mvPlay").textContent = MV.timer ? "とめる" : "さいせい";
-  // 自分で足したものだけ、ここから消せる
+  // 自分で足したものだけ、ここから消せる・タグを付けられる
   document.getElementById("mvDelNow").hidden = !j.movieOnly;
+  document.getElementById("mvTagBox").hidden = !j.movieOnly;
+  if(j.movieOnly) mvRenderTags();
 }
 
 /* ── 盤に打って録る ──────────────────────────────────────
@@ -4046,6 +4098,32 @@ function mvLoad(jid){
   mvShow("play");
   mvRender(); mvRenderNext(); mvRenderAuto();
   if(S.mvAuto) mvPlayPause();        // 切り替わったらすぐ動きだす
+}
+
+/** いま見ているムービーのタグを描く */
+function mvRenderTags(){
+  const box=document.getElementById("mvTagList");
+  const ts=tagsOfMovie(MV.jid);
+  box.innerHTML = ts.length
+    ? ts.map(t=>`<span class="tgchip mine"><b>${t}</b><i data-t="${t}" role="button" aria-label="${t} をはずす">✕</i></span>`).join("")
+    : `<span class="none">まだタグは付いていません</span>`;
+  for(const x of box.querySelectorAll("i[data-t]"))
+    x.addEventListener("click",()=>mvTagSet(x.dataset.t, false));
+}
+/** タグを付ける・はずす */
+function mvTagSet(name, on){
+  const t=(name||"").trim();
+  if(!t) return;
+  const m=(S.movies||[]).find(x=>x.id===MV.jid);
+  if(!m) return;
+  if(!Array.isArray(m.tags)) m.tags=[];
+  if(on){
+    if(m.tags.includes(t)) { toast(`${t} はもう付いています`); return; }
+    m.tags.push(t);
+  }else{
+    m.tags=m.tags.filter(x=>x!==t);
+  }
+  save(); rebuildMovies(); mvRenderTags(); mvRenderList();
 }
 
 /** 自動さいせいの入り切りを描く */
@@ -4170,6 +4248,13 @@ document.getElementById("btnMovieBack").addEventListener("click",()=>{
   go("home");
 });
 document.getElementById("mvBackToList").addEventListener("click",()=>{ mvStop(); mvShow("list"); });
+document.getElementById("mvTagAdd").addEventListener("click",()=>{
+  const el=document.getElementById("mvTagIn");
+  mvTagSet(el.value, true); el.value="";
+});
+document.getElementById("mvTagIn").addEventListener("keydown",e=>{
+  if(e.key==="Enter"){ e.preventDefault(); document.getElementById("mvTagAdd").click(); }
+});
 document.getElementById("mvAuto").addEventListener("click",()=>{
   S.mvAuto=!S.mvAuto; save(); mvRenderAuto();
 });
