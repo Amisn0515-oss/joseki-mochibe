@@ -1232,7 +1232,6 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
           <button class="btn sm lilac" id="mvRecOpen">盤に打って録る</button>
           <button class="btn sm lilac" id="mvAddOpen">棋譜をはりつけ</button>
         </div>
-        <button class="btn sm lilac" id="mvMakerOpen">始点メーカー</button>
       </div>
 
     <div class="panel field" id="mvAdd" hidden>
@@ -1245,6 +1244,9 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
         <button class="btn sm pink" id="mvPasteBtn">ペースト</button>
         <button class="btn sm" id="mvAddGo">たしかめて足す</button>
       </div>
+      <div class="hint">初手が <b id="mvAddOrigin">f5</b> でない棋譜は、そのままでは足せません。
+        下の始点メーカーで向きをそろえてから足してください。</div>
+      <button class="btn sm lilac" id="mvMakerOpen">始点メーカーをひらく</button>
       <button class="btn sm lilac" id="mvAddClose">とじる</button>
       <div class="result" id="mvAddResult" hidden></div>
     </div>
@@ -4054,7 +4056,7 @@ function mvPlayPause(){
 document.getElementById("mvAddOpen").addEventListener("click",()=>{
   const box=document.getElementById("mvAdd");
   box.hidden=!box.hidden;
-  document.getElementById("mvMaker").hidden=true;
+  if(box.hidden) document.getElementById("mvMaker").hidden=true;   // 親を閉じたら一緒に閉じる
   if(!box.hidden){
     document.getElementById("mvKifu").placeholder=spaceKifu("f5d6c5f4e3c6d3f6e6d7");
     box.scrollIntoView({block:"nearest"});
@@ -4093,7 +4095,7 @@ document.getElementById("mvDelNow").addEventListener("click",async ()=>{
 document.getElementById("mvMakerOpen").addEventListener("click",()=>{
   const box=document.getElementById("mvMaker");
   box.hidden=!box.hidden;
-  document.getElementById("mvAdd").hidden=true;
+  // はりつけは閉じない。そこから続けて使うものなので、並べて見せる
   if(!box.hidden){ refreshPlaceholders(); box.scrollIntoView({block:"nearest"}); }
 });
 document.getElementById("mvMakerClose").addEventListener("click",()=>{
@@ -4450,6 +4452,8 @@ function refreshPlaceholders(){
   }
   const mki=document.getElementById("mvMkIn");
   if(mki) mki.placeholder=fKifu("d3c5f6f3c4")+"...";
+  const ao=document.getElementById("mvAddOrigin");
+  if(ao) ao.textContent=ORIGIN;
   const jk=document.getElementById("jeKifu");
   if(jk) jk.placeholder=spaceKifu("f5d6c3d3c4f4");
 }
