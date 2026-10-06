@@ -730,9 +730,10 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .mv-card{color:#F1E9FF}}
 /* 自分で足したもの */
 .mv-card.mine{background:linear-gradient(#FFEFF7,#FFD9EA)}
-/* いま見ているもの。自作かどうかより、こちらを優先して見せる */
-.mv-card.now,.mv-card.mine.now{background:linear-gradient(#FFE7A6,var(--gold));
-  box-shadow:0 3px 0 var(--gold-dk)}
+/* いま見ているもの。自作かどうかより、こちらを優先して見せる。
+   ここの黄は、リボンや下のタブの金色とは別もの。淡いほうにする */
+.mv-card.now,.mv-card.mine.now{background:linear-gradient(#FFF9E4,#FFEEB6);
+  box-shadow:0 3px 0 #E9D08C}
 
 .mv-thumb{flex-shrink:0;width:62px;height:62px;line-height:0;
   border:2.5px solid var(--outline);border-radius:10px;overflow:hidden;
