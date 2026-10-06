@@ -1217,7 +1217,7 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
     <div class="mv-view" id="mvListView">
       <div class="tagbar" id="mvTag"></div>
       <div class="seg mv-sort" id="mvSort">
-        <button data-v="lib">しゅうろく順</button>
+        <button data-v="new">あたらしい順</button>
         <button data-v="views">よく見た順</button>
         <button data-v="len">手数が多い順</button>
       </div>
@@ -2080,7 +2080,7 @@ function rebuildMovies(){
 function addMovie(name, kifu){
   const id="mv"+Date.now().toString(36);
   if(!Array.isArray(S.movies)) S.movies=[];
-  S.movies.push({id, n:(name||"").trim() || "なまえのない手順", s:kifu});
+  S.movies.push({id, n:(name||"").trim() || "なまえのない手順", s:kifu, t:Date.now()});
   save(); rebuildMovies();
   return id;
 }
@@ -2174,7 +2174,7 @@ if(!S.lastDone) S.lastDone={};        // 定石ごとの、最後に解き終わ
 if(!Array.isArray(S.movies)) S.movies=[];   // ムービーでだけ見る手順
 if(!S.views) S.views={};              // ムービーを何回見たか
 if(S.mvAuto===undefined) S.mvAuto=true;   // 開いたらすぐ再生するか
-if(!S.mvSort) S.mvSort="lib";             // 一覧の並べ方
+if(!S.mvSort || S.mvSort==="lib") S.mvSort="new";   // 一覧の並べ方
 if(S.origin!=="e6") S.origin="f5";    // はじめの手。f5 か e6
 ORIGIN=S.origin;
 delete S.tag;  // けいとう（うさぎ・とら…）は手順から決まるので、付けかえは廃止
@@ -3824,13 +3824,27 @@ function boardThumb(j){
 }
 
 /** 一覧に出すものを、絞って並べて返す */
+/** 足した時こく。古いものには残っていないので、並び順で代用する */
+function addedAt(j, i){
+  const m=(S.movies||[]).find(x=>x.id===j.id);
+  return m && m.t ? m.t : i;      // t が無いぶんは、足した順のまま後ろに並ぶ
+}
 function mvItems(){
   let list=movieList();
   if(MV.tag==="じぶん")      list=list.filter(j=>j.movieOnly);
   else if(MV.tag!=="すべて") list=list.filter(j=>tagOf(j)===MV.tag);
   const v=id=>(S.views||{})[id]||0;
-  if(S.mvSort==="views")    list=[...list].sort((a,b)=>v(b.id)-v(a.id));
-  else if(S.mvSort==="len") list=[...list].sort((a,b)=>b.moves.length-a.moves.length);
+  if(S.mvSort==="views")     list=[...list].sort((a,b)=>v(b.id)-v(a.id));
+  else if(S.mvSort==="len")  list=[...list].sort((a,b)=>b.moves.length-a.moves.length);
+  else{
+    /* あたらしい順。自分で足したものを先に、新しいほうから。
+       そのあとに収録の196本が、もとの順で続く。
+       自作が主になる使い方だと、収録のうしろに並ぶのは逆になる     */
+    const mine=MOVIES.filter(j=>list.includes(j))
+      .map((j,i)=>[j, addedAt(j,i)]).sort((a,b)=>b[1]-a[1]).map(x=>x[0]);
+    const rest=list.filter(j=>!j.movieOnly);
+    list=[...mine, ...rest];
+  }
   return list;
 }
 
@@ -3876,7 +3890,7 @@ function mvCard(j){
 /** 一覧を描く */
 function mvRenderList(){
   const bar=document.getElementById("mvTag"); bar.innerHTML="";
-  for(const t of ["すべて", ...TAGS, "じぶん"]){
+  for(const t of ["すべて", "じぶん", ...TAGS]){
     const b=document.createElement("button");
     b.textContent = t==="すべて" ? "ぜんぶ" : t;
     b.setAttribute("aria-pressed", t===MV.tag);
@@ -3889,8 +3903,10 @@ function mvRenderList(){
   const box=document.getElementById("mvGrid"); box.innerHTML="";
   const items=mvItems();
   for(const j of items) box.appendChild(mvCard(j));
+  // 「じぶん」で絞っているときに、うち何本と書くのはくどい
+  const mine=(S.movies||[]).length;
   document.getElementById("mvCount").textContent=
-    `${items.length}本`+((S.movies||[]).length ? `（うち じぶんのもの ${(S.movies||[]).length}本）` : "");
+    `${items.length}本` + (mine && MV.tag!=="じぶん" ? `（うち じぶんのもの ${mine}本）` : "");
 }
 
 /** いま見ているものの次を何本か出す */
