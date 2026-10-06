@@ -113,6 +113,10 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
 
 .app{max-width:440px;margin:0 auto;min-height:100svh;
      padding-bottom:calc(78px + env(safe-area-inset-bottom,0px))}
+/* ムービーの一覧だけは、画面が広いときに広げる。
+   並べて見比べるための画面なので、440pxに収める意味がない。
+   再生のほうは広げない（盤が大きくなりすぎる）                 */
+@media (min-width:900px){ body.mv-wide .app{max-width:1000px} }
 .screen{display:none;flex-direction:column;gap:14px;padding:12px 14px 10px}
 /* 出題画面だけ、すき間と余白を詰める。浮いた分はぜんぶ盤の大きさに回す */
 #s-quiz.on{gap:5px;padding:8px 10px 6px}
@@ -687,27 +691,70 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
   box-shadow:0 2px 0 var(--gold-dk)}
 
 /* ── 定石ムービー ────────────────────────────────────────
-   定石の数が多いので、一覧は高さを決めて中でスクロールさせる        */
-.mv-list{max-height:152px;overflow-y:auto;padding:2px}
-/* 定石を選んだら一覧はたたむ。操作ボタンが画面の外に出ないようにするため */
-.mv-toggle{font:inherit;cursor:pointer}
-/* 定石名が長いと帯からはみ出すので、入りきらない分は … で切る */
-#mvPickToggle{max-width:100%;overflow:hidden;text-overflow:ellipsis}
-#mvPick.folded .tagbar,
-#mvPick.folded .hint,
-#mvPick.folded .mv-list{display:none}
-#mvPick.folded{padding-bottom:8px}
-.mv-list .chk.now{background:linear-gradient(#FFE7A6,var(--gold));
-  box-shadow:0 3px 0 var(--gold-dk)}
-/* ムービーだけに足した手順。消すボタンを右はしに出す */
-.mv-list .chk.mine{background:linear-gradient(#FFEFF7,#FFD9EA)}
-.mv-del{flex-shrink:0;font:inherit;font-size:15px;line-height:1;cursor:pointer;
-  min-width:30px;min-height:30px;border-radius:50%;
-  background:none;border:0;color:var(--outline);opacity:.6;padding:4px 2px 4px 8px}
-.mv-del:active{opacity:1;background:rgba(75,58,128,.16)}
+   一覧は、最後の局面の小さな盤と名前を並べる。押すと再生に切り替わる */
 #s-movie.on{gap:7px;padding:8px 10px 6px}
-/* 一覧をたたんだときの、盤以外の合計が約395px。盤はその残り */
-#s-movie .boardframe{width:min(100%, max(230px, calc(100svh - 395px)))}
+.mv-view{display:flex;flex-direction:column;gap:7px}
+.mv-view[hidden]{display:none}
+
+/* 並べ方。横に3つなので、字を小さくして収める */
+.mv-sort button{font-size:11.5px;padding:7px 2px;-webkit-text-stroke-width:1.8px}
+
+/* 一覧。横幅が広いときは2列、もっと広ければ3列にする */
+.mv-grid{display:grid;grid-template-columns:1fr;gap:8px}
+@media (min-width:560px){.mv-grid{grid-template-columns:1fr 1fr}}
+@media (min-width:900px){.mv-grid{grid-template-columns:repeat(3,1fr)}}
+
+.mv-card{display:flex;align-items:center;gap:10px;width:100%;min-width:0;
+  padding:7px 9px 7px 7px;border-radius:14px;cursor:pointer;font:inherit;text-align:left;
+  border:3px solid var(--outline);color:var(--outline);
+  background:linear-gradient(var(--paper),var(--paper-2));
+  box-shadow:0 3px 0 var(--paper-dk), inset 0 2px 0 rgba(255,255,255,.8);
+  transition:transform .08s,box-shadow .08s}
+.mv-card:active{transform:translateY(3px);box-shadow:0 1px 0 var(--paper-dk)}
+:root[data-theme="dark"] .mv-card{color:#F1E9FF}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .mv-card{color:#F1E9FF}}
+/* いま見ているもの */
+.mv-card.now{background:linear-gradient(#FFE7A6,var(--gold));box-shadow:0 3px 0 var(--gold-dk)}
+/* 自分で足したもの */
+.mv-card.mine{background:linear-gradient(#FFEFF7,#FFD9EA)}
+
+.mv-thumb{flex-shrink:0;width:62px;height:62px;line-height:0;
+  border:2.5px solid var(--outline);border-radius:10px;overflow:hidden;
+  background:var(--board-line);box-shadow:inset 0 2px 4px rgba(0,0,0,.25)}
+.mv-thumb svg{display:block;width:100%;height:100%}
+.thumb .tb{fill:var(--board)}
+.thumb .tl{stroke:var(--board-line);stroke-width:1.1;fill:none;opacity:.8}
+.thumb .sb{fill:#2E2352;stroke:var(--outline);stroke-width:.9}
+.thumb .sw{fill:#FFF6FA;stroke:var(--outline);stroke-width:.9}
+
+.mv-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.mv-name{font-size:12.5px;line-height:1.4;font-weight:700;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.mv-sub{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.mv-num{font-family:"Baloo 2",cursive;font-weight:800;font-size:10.5px;opacity:.72}
+.mv-del{flex-shrink:0;font-size:15px;line-height:1;cursor:pointer;
+  width:30px;height:30px;display:grid;place-items:center;border-radius:50%;
+  color:var(--outline);opacity:.55}
+.mv-del:active{opacity:1;background:rgba(75,58,128,.16)}
+
+/* 自動さいせいのつまみ */
+.mv-auto{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  width:100%;font:inherit;cursor:pointer;padding:8px 12px;border-radius:14px;
+  border:3px solid var(--outline);
+  background:linear-gradient(var(--panel-2),var(--panel));
+  box-shadow:0 3px 0 var(--panel-dk), inset 0 2px 0 rgba(255,255,255,.35)}
+.mv-auto-t{font-family:"Mochiy Pop One",sans-serif;font-size:12.5px;color:#fff;
+  paint-order:stroke fill;-webkit-text-stroke:2px var(--outline)}
+.mv-auto-s{flex-shrink:0;width:48px;height:26px;border-radius:99px;position:relative;
+  border:2.5px solid var(--outline);background:var(--panel-dk);transition:background .14s}
+.mv-auto-s i{position:absolute;top:1px;left:1px;width:19px;height:19px;border-radius:50%;
+  background:linear-gradient(#FFF,#FFE6F2);border:2px solid var(--outline);
+  transition:transform .14s cubic-bezier(.3,1.4,.6,1)}
+.mv-auto.on .mv-auto-s{background:linear-gradient(#9CEDD4,var(--mint))}
+.mv-auto.on .mv-auto-s i{transform:translateX(21px)}
+
+/* 再生のとき、盤以外の合計が約330px。盤はその残り */
+#s-movie .boardframe{width:min(100%, max(230px, calc(100svh - 330px)))}
 #s-movie .msgbox{min-height:44px}
 #s-movie .turnpill{padding:3px 18px}
 /* 手順。いま打ったところを目立たせる */
@@ -1162,58 +1209,31 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
        知っておきたい形を、盤の上で再生して見る。                      -->
   <section class="screen" id="s-movie">
     <div class="qbar">
-      <button class="iconbtn" id="btnMovieBack" aria-label="ホームへもどる">
+      <button class="iconbtn" id="btnMovieBack" aria-label="もどる">
         <svg viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></svg>
       </button>
-      <div class="out sm qtitle">定石ムービー</div>
+      <div class="out sm qtitle" id="mvTitle">定石ムービー</div>
     </div>
 
-    <div class="turnpill" id="mvTurn"><span class="d b"></span>定石をえらんでください</div>
-
-    <div class="boardframe">
-      <div class="files" id="mvFiles"></div>
-      <div class="ranks" id="mvRanks"></div>
-      <div class="boardin"><div class="board" id="mvBoard"></div></div>
-    </div>
-
-    <div class="rowbar" id="mvPlayBar">
-      <button class="btn sm lilac" id="mvPrev">◀ 1手</button>
-      <button class="btn sm" id="mvPlay">さいせい</button>
-      <button class="btn sm lilac" id="mvNext">1手 ▶</button>
-    </div>
-
-    <!-- 盤に打って録っている間だけ、ここが操作欄になる -->
-    <div class="field" id="mvRecBar" hidden>
-      <div class="rowbar">
-        <button class="btn sm lilac" id="mvRecUndo">1手もどす</button>
-        <button class="btn sm lilac" id="mvRecClear">ぜんぶ消す</button>
-      </div>
-      <input class="tin" id="mvRecName" type="text" placeholder="なまえ（例：きのうの対局）">
-      <div class="rowbar">
-        <button class="btn sm" id="mvRecSave">この手順を録る</button>
-        <button class="btn sm lilac" id="mvRecStop">やめる</button>
-      </div>
-      <div class="result" id="mvRecResult" hidden></div>
-    </div>
-    <div class="seg" id="mvSpeed">
-      <button data-v="1400">ゆっくり</button>
-      <button data-v="800">ふつう</button>
-      <button data-v="420">はやい</button>
-    </div>
-    <div class="msgbox" id="mvMsg"><div class="s">下の一覧から定石をえらぶと、ここに手順が出ます</div></div>
-    <button class="btn sm pink" id="mvDelNow" hidden>このムービーを消す</button>
-
-    <div class="panel field" id="mvPick">
-      <button class="ribbon out sm mv-toggle" id="mvPickToggle">どの定石を見る？</button>
+    <!-- ① 一覧。さいしょに出るのはこちら -->
+    <div class="mv-view" id="mvListView">
       <div class="tagbar" id="mvTag"></div>
-      <div class="hint" id="mvCount"></div>
-      <div class="checks mv-list" id="mvList"></div>
-      <div class="rowbar">
-        <button class="btn sm lilac" id="mvRecOpen">盤に打って録る</button>
-        <button class="btn sm lilac" id="mvAddOpen">棋譜をはりつけ</button>
+      <div class="seg mv-sort" id="mvSort">
+        <button data-v="lib">しゅうろく順</button>
+        <button data-v="views">よく見た順</button>
+        <button data-v="len">手数が多い順</button>
       </div>
-      <button class="btn sm lilac" id="mvMakerOpen">始点メーカー</button>
-    </div>
+      <div class="hint" id="mvCount"></div>
+      <div class="mv-grid" id="mvGrid"></div>
+
+      <div class="panel field">
+        <div class="ribbon out sm">ムービーをつくる</div>
+        <div class="rowbar">
+          <button class="btn sm lilac" id="mvRecOpen">盤に打って録る</button>
+          <button class="btn sm lilac" id="mvAddOpen">棋譜をはりつけ</button>
+        </div>
+        <button class="btn sm lilac" id="mvMakerOpen">始点メーカー</button>
+      </div>
 
     <div class="panel field" id="mvAdd" hidden>
       <div class="ribbon out sm">ムービーに足す</div>
@@ -1265,8 +1285,58 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
       <button class="btn sm lilac" id="mvMakerClose">とじる</button>
       <div class="result" id="mvMkResult" hidden></div>
     </div>
+    </div>
 
-    <div style="height:6px"></div>
+    <!-- ② 再生。一覧から押したときだけ出る -->
+    <div class="mv-view" id="mvPlayView" hidden>
+      <div class="turnpill" id="mvTurn"><span class="d b"></span>定石をえらんでください</div>
+
+      <div class="boardframe">
+        <div class="files" id="mvFiles"></div>
+        <div class="ranks" id="mvRanks"></div>
+        <div class="boardin"><div class="board" id="mvBoard"></div></div>
+      </div>
+
+      <div class="rowbar" id="mvPlayBar">
+        <button class="btn sm lilac" id="mvPrev">◀ 1手</button>
+        <button class="btn sm" id="mvPlay">さいせい</button>
+        <button class="btn sm lilac" id="mvNext">1手 ▶</button>
+      </div>
+
+    <!-- 盤に打って録っている間だけ、ここが操作欄になる -->
+    <div class="field" id="mvRecBar" hidden>
+      <div class="rowbar">
+        <button class="btn sm lilac" id="mvRecUndo">1手もどす</button>
+        <button class="btn sm lilac" id="mvRecClear">ぜんぶ消す</button>
+      </div>
+      <input class="tin" id="mvRecName" type="text" placeholder="なまえ（例：きのうの対局）">
+      <div class="rowbar">
+        <button class="btn sm" id="mvRecSave">この手順を録る</button>
+        <button class="btn sm lilac" id="mvRecStop">やめる</button>
+      </div>
+      <div class="result" id="mvRecResult" hidden></div>
+    </div>
+      <div class="seg" id="mvSpeed">
+        <button data-v="1400">ゆっくり</button>
+        <button data-v="800">ふつう</button>
+        <button data-v="420">はやい</button>
+      </div>
+      <div class="msgbox" id="mvMsg"><div class="s">一覧からえらぶと、ここに手順が出ます</div></div>
+
+      <!-- 自動さいせい。開いたらすぐ動きだすかどうか -->
+      <button class="mv-auto" id="mvAuto" role="switch" aria-checked="true">
+        <span class="mv-auto-t">じどうさいせい</span>
+        <span class="mv-auto-s"><i></i></span>
+      </button>
+
+      <button class="btn sm pink" id="mvDelNow" hidden>このムービーを消す</button>
+
+      <div class="panel field" id="mvNextBox">
+        <div class="ribbon out sm">つぎに見る</div>
+        <div class="mv-grid" id="mvNextGrid"></div>
+        <button class="btn sm lilac" id="mvBackToList">一覧にもどる</button>
+      </div>
+    </div>
   </section>
 
   <!-- ══════════ せってい（アプリの動きかた）══════════ -->
@@ -2095,6 +2165,9 @@ if(!S.kifu)    S.kifu={};             // 自分で直した手順（収録定石
 if(!S.miss)     S.miss={};            // 最後に解いたとき、パーフェクトでなかった定石
 if(!S.lastDone) S.lastDone={};        // 定石ごとの、最後に解き終わった日
 if(!Array.isArray(S.movies)) S.movies=[];   // ムービーでだけ見る手順
+if(!S.views) S.views={};              // ムービーを何回見たか
+if(S.mvAuto===undefined) S.mvAuto=true;   // 開いたらすぐ再生するか
+if(!S.mvSort) S.mvSort="lib";             // 一覧の並べ方
 if(S.origin!=="e6") S.origin="f5";    // はじめの手。f5 か e6
 ORIGIN=S.origin;
 delete S.tag;  // けいとう（うさぎ・とら…）は手順から決まるので、付けかえは廃止
@@ -3580,6 +3653,7 @@ function finish(){
    ========================================================================= */
 function go(name){
   for(const s of document.querySelectorAll(".screen")) s.classList.toggle("on", s.id===`s-${name}`);
+  if(name!=="movie") document.body.classList.remove("mv-wide");   // 広げるのはムービーの一覧だけ
   // せってい はタブに無くホームから開くので、その間はホームを点灯させておく
   const lit = (name==="set"||name==="movie") ? "home" : (name==="new" ? "reg" : name);
   for(const t of document.querySelectorAll(".tab")) t.setAttribute("aria-selected", t.dataset.s===lit);
@@ -3722,46 +3796,129 @@ const MVREC={on:false, moves:[]};
 
 
 /** 一覧を描く。けいとうでしぼりこめる */
+/* ── 一覧 ────────────────────────────────────────────────
+   最後の局面を小さな盤で見せ、押すと再生の画面に切り替わる。
+   数が多いので、絵は画面に入ったものだけ描く。                 */
+
+/** 最後の局面の小さな盤。空マスは描かず、石だけ置く（軽くするため） */
+function boardThumb(j){
+  const b=j.states[j.states.length-1].board;
+  let st="";
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+    const v=b[r][c]; if(!v) continue;
+    const [dr,dc]=fRC(r,c);                       // 始点の設定に合わせて折り返す
+    st+=`<circle cx="${dc*12+6}" cy="${dr*12+6}" r="4.6" class="${v===1?"sb":"sw"}"/>`;
+  }
+  let ln="";
+  for(let i=1;i<8;i++) ln+=`M${i*12} 0V96M0 ${i*12}H96`;
+  return `<svg class="thumb" viewBox="0 0 96 96" aria-hidden="true">`
+       + `<rect width="96" height="96" rx="8" class="tb"/>`
+       + `<path class="tl" d="${ln}"/>${st}</svg>`;
+}
+
+/** 一覧に出すものを、絞って並べて返す */
+function mvItems(){
+  let list=movieList();
+  if(MV.tag==="じぶん")      list=list.filter(j=>j.movieOnly);
+  else if(MV.tag!=="すべて") list=list.filter(j=>tagOf(j)===MV.tag);
+  const v=id=>(S.views||{})[id]||0;
+  if(S.mvSort==="views")    list=[...list].sort((a,b)=>v(b.id)-v(a.id));
+  else if(S.mvSort==="len") list=[...list].sort((a,b)=>b.moves.length-a.moves.length);
+  return list;
+}
+
+/* 画面に入ってきたものから絵を描く。200本ぶんを一度に描くと重い */
+const thumbSeen = ("IntersectionObserver" in window)
+  ? new IntersectionObserver(es=>{
+      for(const e of es){
+        if(!e.isIntersecting) continue;
+        const el=e.target, j=movieById(el.dataset.jid);
+        if(j && !el.firstChild) el.innerHTML=boardThumb(j);
+        thumbSeen.unobserve(el);
+      }
+    }, {rootMargin:"200px"})
+  : null;
+
+/** 1本ぶんの行を作る */
+function mvCard(j){
+  const views=(S.views||{})[j.id]||0;
+  const a=document.createElement("button");
+  a.className="mv-card"+(j.id===MV.jid?" now":"")+(j.movieOnly?" mine":"");
+  a.innerHTML=`<span class="mv-thumb" data-jid="${j.id}"></span>`
+    +`<span class="mv-meta">`
+    +  `<span class="mv-name">${j.n}</span>`
+    +  `<span class="mv-sub">`
+    +    (j.movieOnly ? `<span class="tgchip hoka">じぶん</span>` : tagChip(j))
+    +    `<span class="mv-num">${j.moves.length}手</span>`
+    +    `<span class="mv-num">${views ? views+"回見た" : "まだ見ていない"}</span>`
+    +  `</span>`
+    +`</span>`
+    + (j.movieOnly ? `<span class="mv-del" role="button" aria-label="けす">✕</span>` : "");
+  const th=a.querySelector(".mv-thumb");
+  if(thumbSeen) thumbSeen.observe(th); else th.innerHTML=boardThumb(j);
+  a.addEventListener("click",async e=>{
+    if(e.target.classList.contains("mv-del")){
+      e.stopPropagation();
+      await mvDelete(j); return;
+    }
+    mvLoad(j.id);
+  });
+  return a;
+}
+
+/** 一覧を描く */
 function mvRenderList(){
   const bar=document.getElementById("mvTag"); bar.innerHTML="";
-  for(const t of ["すべて", ...TAGS]){
+  for(const t of ["すべて", ...TAGS, "じぶん"]){
     const b=document.createElement("button");
     b.textContent = t==="すべて" ? "ぜんぶ" : t;
     b.setAttribute("aria-pressed", t===MV.tag);
     b.addEventListener("click",()=>{ MV.tag=t; mvRenderList(); });
     bar.appendChild(b);
   }
-  const box=document.getElementById("mvList"); box.innerHTML="";
-  let cnt=0;
-  for(const j of movieList()){
-    if(MV.tag!=="すべて" && tagOf(j)!==MV.tag) continue;
-    cnt++;
-    const b=document.createElement("button");
-    b.className="chk"+(j.id===MV.jid?" now":"")+(j.movieOnly?" mine":"");
-    b.innerHTML=(j.movieOnly ? `<span class="tgchip hoka">ムービー</span>` : tagChip(j))
-               +`<span class="nm">${j.n}</span>`
-               +`<span class="mv">${j.moves.length}手</span>`
-               +(j.movieOnly ? `<button class="mv-del" aria-label="けす">✕</button>` : "");
-    b.addEventListener("click",async e=>{
-      if(e.target.classList.contains("mv-del")){
-        e.stopPropagation();
-        const ok=await ask("この手順をけしますか",
-          `<b>${j.n}</b> をムービーから消します。もとに戻せません。`, "けす", true);
-        if(!ok) return;
-        S.movies=(S.movies||[]).filter(m=>m.id!==j.id);
-        if(MV.jid===j.id){ MV.jid=null; MV.k=0; }
-        save(); rebuildMovies(); mvRenderList(); mvRender();
-        return;
-      }
-      mvLoad(j.id);
-    });
-    box.appendChild(b);
-  }
+  for(const b of document.querySelectorAll("#mvSort button"))
+    b.setAttribute("aria-pressed", b.dataset.v===S.mvSort);
+
+  const box=document.getElementById("mvGrid"); box.innerHTML="";
+  const items=mvItems();
+  for(const j of items) box.appendChild(mvCard(j));
   document.getElementById("mvCount").textContent=
-    `${cnt}本`+((S.movies||[]).length ? `（うちムービー専用 ${(S.movies||[]).length}本）` : "");
+    `${items.length}本`+((S.movies||[]).length ? `（うち じぶんのもの ${(S.movies||[]).length}本）` : "");
 }
 
-/** 速さのボタンの見た目をそろえる */
+/** いま見ているものの次を何本か出す */
+function mvRenderNext(){
+  const box=document.getElementById("mvNextGrid"); box.innerHTML="";
+  const items=mvItems();
+  const at=items.findIndex(j=>j.id===MV.jid);
+  const rest=items.slice(at+1).concat(items.slice(0, Math.max(0,at)));
+  for(const j of rest.slice(0,4)) box.appendChild(mvCard(j));
+}
+
+/** ムービーを1本消す */
+async function mvDelete(j){
+  const ok=await ask("このムービーをけしますか",
+    `<b>${j.n}</b> を消します。もとに戻せません。`, "けす", true);
+  if(!ok) return;
+  S.movies=(S.movies||[]).filter(m=>m.id!==j.id);
+  if(S.views) delete S.views[j.id];
+  if(MV.jid===j.id){ MV.jid=null; MV.k=0; mvShow("list"); }
+  save(); rebuildMovies(); mvRenderList(); mvRender();
+}
+
+/** 一覧と再生を切り替える */
+function mvShow(which){
+  const play = which==="play";
+  document.getElementById("mvListView").hidden=play;
+  document.getElementById("mvPlayView").hidden=!play;
+  const j=movieById(MV.jid);
+  document.getElementById("mvTitle").textContent =
+    play && j ? j.n : "定石ムービー";
+  document.body.classList.toggle("mv-wide", !play);
+  if(!play){ mvStop(); mvRenderList(); }
+  window.scrollTo(0,0);
+}
+
 function mvRenderSpeed(){
   for(const b of document.querySelectorAll("#mvSpeed button"))
     b.setAttribute("aria-pressed", String(MV.speed)===b.dataset.v);
@@ -3837,11 +3994,13 @@ function mvRecPlay(r,c){
 /** 録るのを始める・やめる */
 function mvRecMode(on){
   MVREC.on=on;
-  if(on){ mvStop(); MVREC.moves=[]; }
+  if(on){ mvStop(); MVREC.moves=[]; MV.jid=null; MV.k=0; mvShow("play");
+          document.getElementById("mvTitle").textContent="盤に打って録る"; }
+  else mvShow("list");
   document.getElementById("mvRecBar").hidden=!on;
   document.getElementById("mvPlayBar").hidden=on;
   document.getElementById("mvSpeed").hidden=on;
-  document.getElementById("mvPick").hidden=on;
+  document.getElementById("mvNextBox").hidden=on;
   document.getElementById("mvAdd").hidden=true;
   document.getElementById("mvMaker").hidden=true;
   document.getElementById("mvDelNow").hidden=true;
@@ -3857,18 +4016,20 @@ function mvLoad(jid){
   mvStop(); MV.jid=jid; MV.k=0;
   document.getElementById("mvAdd").hidden=true;
   document.getElementById("mvMaker").hidden=true;
-  mvFold(true);                     // えらんだら一覧はたたむ
-  mvRenderList(); mvRender();
-  window.scrollTo(0,0);
+  // 何回見たかを数える。開いた回数ではなく、見た回数として1本につき1
+  if(!S.views) S.views={};
+  S.views[jid]=(S.views[jid]||0)+1;
+  save();
+  mvShow("play");
+  mvRender(); mvRenderNext(); mvRenderAuto();
+  if(S.mvAuto) mvPlayPause();        // 切り替わったらすぐ動きだす
 }
 
-/** 定石えらびの一覧を、たたむ／ひらく */
-function mvFold(fold){
-  const pick=document.getElementById("mvPick");
-  pick.classList.toggle("folded", fold);
-  const j=movieById(MV.jid);
-  document.getElementById("mvPickToggle").textContent =
-    fold && j ? `${j.n} ▲` : "どの定石を見る？";
+/** 自動さいせいの入り切りを描く */
+function mvRenderAuto(){
+  const b=document.getElementById("mvAuto");
+  b.setAttribute("aria-checked", String(!!S.mvAuto));
+  b.classList.toggle("on", !!S.mvAuto);
 }
 
 function mvStep(d){
@@ -3924,13 +4085,8 @@ document.getElementById("mvRecSave").addEventListener("click",()=>{
 
 /* ── いま見ているムービーを消す ── */
 document.getElementById("mvDelNow").addEventListener("click",async ()=>{
-  const j=movieById(MV.jid); if(!j || !j.movieOnly) return;
-  const ok=await ask("このムービーをけしますか",
-    `<b>${j.n}</b> を消します。もとに戻せません。`, "けす", true);
-  if(!ok) return;
-  S.movies=(S.movies||[]).filter(m=>m.id!==j.id);
-  MV.jid=null; MV.k=0;
-  save(); rebuildMovies(); mvFold(false); mvRenderList(); mvRender();
+  const j=movieById(MV.jid);
+  if(j && j.movieOnly) await mvDelete(j);
 });
 
 /* ── ムービーの始点メーカー ── */
@@ -3981,16 +4137,25 @@ document.getElementById("btnToMovie").addEventListener("click",()=>{
   go("movie");
   if(!document.getElementById("mvBoard").children.length)
     buildBoardDom("mvFiles","mvRanks","mvBoard",mvRecPlay);   // 録るときだけ受け付ける
-  mvRenderList(); mvRenderSpeed(); mvRender();
+  MV.jid=null; MV.k=0;
+  mvShow("list"); mvRenderSpeed(); mvRenderAuto();
 });
 document.getElementById("btnMovieBack").addEventListener("click",()=>{
-  mvStop(); if(MVREC.on) mvRecMode(false); go("home"); });
+  mvStop();
+  if(MVREC.on){ mvRecMode(false); return; }         // 録っている途中なら、まず録るのをやめる
+  if(!document.getElementById("mvPlayView").hidden){ mvShow("list"); return; }
+  go("home");
+});
+document.getElementById("mvBackToList").addEventListener("click",()=>{ mvStop(); mvShow("list"); });
+document.getElementById("mvAuto").addEventListener("click",()=>{
+  S.mvAuto=!S.mvAuto; save(); mvRenderAuto();
+});
+for(const b of document.querySelectorAll("#mvSort button"))
+  b.addEventListener("click",()=>{ S.mvSort=b.dataset.v; save(); mvRenderList(); });
 document.getElementById("mvPrev").addEventListener("click",()=>{ mvStop(); mvStep(-1); });
 document.getElementById("mvNext").addEventListener("click",()=>{ mvStop(); mvStep(1); });
 document.getElementById("mvPlay").addEventListener("click",mvPlayPause);
-document.getElementById("mvPickToggle").addEventListener("click",()=>{
-  mvFold(!document.getElementById("mvPick").classList.contains("folded"));
-});
+
 for(const b of document.querySelectorAll("#mvSpeed button"))
   b.addEventListener("click",()=>{
     MV.speed=+b.dataset.v; mvRenderSpeed();
