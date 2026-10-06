@@ -4513,11 +4513,29 @@ function showResult(id, ok, html){
 
 /* 入力欄に触れるとキーボードが出る。そのとき iPhone は下に固定した帯を
    キーボードの上へ持ち上げてしまうので、入力中は下のタブを引っこめる。
-   ついでに、入力欄を画面の真ん中へ戻してやる。 */
+
+   動かすのはここだけにする。iPhone は自分でも入力欄を送るので、
+   こちらから「真ん中へ」と動かすと、行って戻るように大きく揺れる。
+   隠れているときだけ、見える位置まで最小限だけ動かす。          */
+function keepInView(el){
+  try{
+    const r=el.getBoundingClientRect();
+    const vv=window.visualViewport;
+    const top=vv ? vv.offsetTop : 0;
+    const bottom=top + (vv ? vv.height : innerHeight);
+    // 上にも下にもはみ出していなければ、何もしない
+    if(r.top>=top+4 && r.bottom<=bottom-4) return;
+    el.scrollIntoView({block:"nearest"});     // なめらかにはしない。一度で決める
+  }catch(_){}
+}
 for(const el of document.querySelectorAll("input[type=text], textarea")){
   el.addEventListener("focus",()=>{
     document.body.classList.add("typing");
-    setTimeout(()=>{ try{ el.scrollIntoView({block:"center", behavior:"smooth"}); }catch(_){} },320);
+    // キーボードが出きってから、一度だけ見る
+    const vv=window.visualViewport;
+    const once=()=>keepInView(el);
+    if(vv) vv.addEventListener("resize", once, {once:true});
+    setTimeout(once, 400);
   });
   el.addEventListener("blur",()=>document.body.classList.remove("typing"));
 }
