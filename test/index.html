@@ -709,6 +709,11 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
 .mv-view{display:flex;flex-direction:column;gap:7px}
 .mv-view[hidden]{display:none}
 
+/* 本数の行。パネルの上ではなく地のうえに出るので、白では沈む。
+   パネル外の文字の色（--ink）を使う                              */
+#mvCount{color:var(--ink);text-shadow:none;opacity:1;font-weight:700;font-size:12px;
+  padding:0 4px}
+
 /* 並べ方。横に3つなので、字を小さくして収める */
 .mv-sort button{font-size:11.5px;padding:7px 2px;-webkit-text-stroke-width:1.8px}
 
