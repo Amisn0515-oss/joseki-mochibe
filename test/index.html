@@ -96,6 +96,14 @@ body{
   /* 同じ場所を2回続けて押したときの「ダブルタップで拡大」を止める。
      指2本でひろげる拡大は、そのまま使える */
   touch-action:manipulation;
+  /* 文字を押しっぱなしにしたときの、青い選択と吹き出しを出さない。
+     ボタンや見出しを押しそこねただけで選択されるのが、じゃまになるため。
+     下の .pickable を付けたところだけは、手で写せるように残してある */
+  -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
+}
+/* 自分で写したいところ。入力欄と、棋譜を見せているところ */
+input, textarea, .seqline, .kifuout, .seq, .mv-seq, .pickable{
+  -webkit-user-select:text; user-select:text; -webkit-touch-callout:default;
 }
 button,.cell,.regrow,.chk,.tab{touch-action:manipulation}
 button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
