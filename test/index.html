@@ -326,6 +326,23 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
   box-shadow:0 4px 0 var(--lilac-dk), inset 0 2px 0 rgba(255,255,255,.6)}
 #btnToday{margin-top:9px}
 
+/* きょうの進み。大ボタンのすぐ上に置く */
+.todaybar{display:flex;flex-direction:column;gap:5px}
+.todaybar[hidden]{display:none}
+.tb-t{font-family:"Mochiy Pop One",sans-serif;font-size:13px;color:#fff;
+  paint-order:stroke fill;-webkit-text-stroke:2.2px var(--outline);text-align:center}
+
+/* 1セット終わったときの、まとめ */
+.fin{font-size:14px;line-height:2;text-align:center;color:var(--ink)}
+.fin b{font-family:"Baloo 2",cursive;font-weight:800;font-size:20px;
+  color:var(--outline);margin:0 2px}
+:root[data-theme="dark"] .fin,:root[data-theme="dark"] .fin b{color:#F1E9FF}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .fin,
+  :root:not([data-theme="light"]) .fin b{color:#F1E9FF}
+}
+.fin.s{font-size:12px;line-height:1.7;opacity:.85;margin-top:6px}
+
 /* 復習の入口。見出しの下に、拾ったものを2行で見せる */
 .btn.review{display:flex;flex-direction:column;align-items:center;gap:3px;
   padding:12px 12px 11px}
@@ -766,6 +783,12 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .mv-sub{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .mv-num{font-family:"Baloo 2",cursive;font-weight:800;font-size:10.5px;opacity:.72}
+/* どこまで覚えているか。3つの状態を色で分ける */
+.mv-state{font-size:9.5px;padding:1px 7px;border-radius:99px;flex-shrink:0;
+  font-weight:800;border:2px solid var(--outline);line-height:1.5;white-space:nowrap;
+  color:#4B3A80;background:#E6E1F0}
+.mv-state.mast{background:linear-gradient(#FFE7A6,var(--gold))}
+.mv-state.mid {background:#CFF2D8}
 .mv-del{flex-shrink:0;font-size:15px;line-height:1;cursor:pointer;
   width:30px;height:30px;display:grid;place-items:center;border-radius:50%;
   color:var(--outline);opacity:.55}
@@ -1076,6 +1099,12 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
       <div class="hint daynote" id="dayNote">曜日ごとに、その日に出す定石が決めてあります。
         中身を変えるときは下の「出題する定石」から。</div>
       <button class="btn sm lilac" id="btnToday" hidden>きょうに戻る</button>
+    </div>
+
+    <!-- きょう何問といたか。定石ごとのバーはあるが、全体の数が無かった -->
+    <div class="todaybar" id="todayBar" hidden>
+      <div class="tb-t" id="tbTxt">きょうの進み</div>
+      <div class="xp"><i id="tbFill" style="width:0%"></i><span id="tbNum">0 / 0</span></div>
     </div>
 
     <button class="btn big" id="btnStart">くいずをとく</button>
@@ -3397,10 +3426,27 @@ function renderHome(animate){
     : `曜日ごとに、その日に出す定石が決めてあります。`
       + `<br>左右の 〈 〉 で、ほかの曜日も見られます。`;
 
+  // きょう何問といたか。曜日を送って見ているときは出さない（きょうの数ではないので）
+  const bar=document.getElementById("todayBar");
+  if(away || !ids.length){ bar.hidden=true; }
+  else{
+    let done=0, all=0;
+    for(const id of ids){ const p=dayProgress(byId[id]); done+=p.done; all+=p.all; }
+    bar.hidden=false;
+    document.getElementById("tbTxt").textContent =
+      (all && done>=all) ? "きょうのぶん、ぜんぶ解きました" : "きょうの進み";
+    document.getElementById("tbFill").style.width = all ? `${(done/all)*100}%` : "0%";
+    document.getElementById("tbNum").textContent = `${done} / ${all}問`;
+  }
+
   const grid=document.getElementById("todayGrid");
   grid.innerHTML="";
   if(!ids.length){
-    grid.innerHTML=`<div class="empty">この曜日はまだ空っぽ<br>出題する定石 から選んでね</div>`;
+    grid.innerHTML=`<div class="empty">この曜日はまだ空っぽ<br>`
+      +`<button class="btn sm lilac" id="btnGoReg">出題する定石をえらぶ</button></div>`;
+    document.getElementById("btnGoReg").addEventListener("click",()=>{
+      editDay=viewDay; go("reg");        // 見ていた曜日のまま、えらぶ画面へ
+    });
   }else{
     for(const id of ids){
       const j=byId[id], p=dayProgress(j), pct=p.all? (p.done/p.all)*100 : 0;
@@ -3739,11 +3785,26 @@ function qToast(text, pt){
     ok.onclick=()=>{ t.classList.remove("show"); ok.onclick=null; uiBusy=false; resolve(); };
   });
 }
-function finish(){
+async function finish(){
   save();
   renderHome(true); go("home");
   if(S.today>0) burst();
-  toast("きょうのぶん おわり！");
+  /* 区切りで、やったことを見せる。毎問ではなく、ここでまとめて出す。
+     数は、その日の記録からそのまま数える                           */
+  const ids=todayIds();
+  let done=0, all=0, perfect=0;
+  for(const id of ids){
+    const p=dayProgress(byId[id]); done+=p.done; all+=p.all;
+    if((S.dperfect||{})[id]) perfect++;
+  }
+  const miss=missIds().length;
+  await ask("きょうのぶん おわり！",
+      `<div class="fin"><b>${done}</b> 問 といた</div>`
+    + `<div class="fin"><b>${perfect}</b> 本 パーフェクト</div>`
+    + `<div class="fin">★ <b>+${S.today}</b></div>`
+    + (miss ? `<div class="fin s">まちがえた定石が ${miss}本 あります。`
+            + `<br>下の「復習する」から、もう一度できます。</div>` : ""),
+    "とじる", false, true);
 }
 
 /* =========================================================================
@@ -3980,6 +4041,14 @@ const thumbSeen = ("IntersectionObserver" in window)
     }, {rootMargin:"200px"})
   : null;
 
+/** その定石をどこまで覚えているか。ムービーの一覧に出す */
+function masteryOf(j){
+  if(j.movieOnly) return null;                       // 自分で足したものは、覚える対象ではない
+  if((S.perfect||{})[j.id]) return ["mast","マスター"];
+  const p=jProgress(j);
+  return p.done>0 ? ["mid","れんしゅう中"] : ["new","まだ"];
+}
+
 /** 1本ぶんの行を作る */
 function mvCard(j){
   const views=(S.views||{})[j.id]||0;
@@ -3994,6 +4063,8 @@ function mvCard(j){
     +    tagsOfMovie(j.id).map(t=>`<span class="tgchip mine"><b>${t}</b></span>`).join("")
     +    `<span class="mv-num">${j.moves.length}手</span>`
     +    `<span class="mv-num">${views ? views+"回見た" : "まだ見ていない"}</span>`
+    +    (()=>{ const m=masteryOf(j);
+             return m ? `<span class="mv-state ${m[0]}">${m[1]}</span>` : ""; })()
     +  `</span>`
     +`</span>`
     + (j.movieOnly ? `<span class="mv-del" role="button" aria-label="けす">✕</span>` : "");
@@ -4440,10 +4511,11 @@ let selMode=false, selected=new Set();
  * ブラウザの confirm() は、アーティファクトのようなサンドボックスの中では
  * ダイアログが出ないまま false が返ってくるので、自前の画面で置きかえている。
  */
-function ask(title, body, okLabel, danger){
+function ask(title, body, okLabel, danger, soloOk){
   return new Promise(resolve=>{
     const ov=document.getElementById("ask");
     const ok=document.getElementById("askOk"), no=document.getElementById("askNo");
+    no.hidden=!!soloOk;                  // 知らせるだけのときは、やめるを出さない
     document.getElementById("askTitle").textContent=title;
     document.getElementById("askBody").innerHTML=body;
     ok.textContent=okLabel||"はい";
