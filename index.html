@@ -523,8 +523,7 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
 .tabs{transition:transform .18s ease}
 body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる */
 .tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;
-  /* 青みのピンク。赤寄り（#FFC9E0→#F7A6C8）から、紫寄りにずらしている */
-  background:linear-gradient(#F9C8EC,#E59DD4);
+  background:linear-gradient(#FFC9E0,#F7A6C8);
   border-top:3px solid var(--outline);
   box-shadow:0 -4px 14px rgba(50,30,95,.25);
   padding:7px 0 calc(7px + env(safe-area-inset-bottom,0px))}
@@ -534,13 +533,12 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
   border:3px solid var(--outline);border-radius:14px;
   font-family:"Mochiy Pop One",sans-serif;font-size:11px;color:#fff;
   paint-order:stroke fill;-webkit-text-stroke:1.8px var(--outline);
-  /* 赤寄りだったぶん（#FFA8CB→#E87BA8 / 影 #BE5B84）から紫寄りへ */
-  background:linear-gradient(#F2A9E0,#D47FC0);
-  box-shadow:0 4px 0 #A85A9C, inset 0 2px 0 rgba(255,255,255,.35);
+  background:linear-gradient(#FFA8CB,#E87BA8);
+  box-shadow:0 4px 0 #BE5B84, inset 0 2px 0 rgba(255,255,255,.35);
   transition:transform .08s,box-shadow .08s}
 .tab[aria-selected="true"]{background:linear-gradient(var(--star),var(--gold));
   box-shadow:0 4px 0 var(--gold-dk), inset 0 2px 0 rgba(255,255,255,.75);transform:translateY(-2px)}
-.tab:active{transform:translateY(2px);box-shadow:0 1px 0 #A85A9C}
+.tab:active{transform:translateY(2px);box-shadow:0 1px 0 #BE5B84}
 .tab svg{width:22px;height:22px;fill:none;stroke:#fff;stroke-width:3;
   stroke-linecap:round;stroke-linejoin:round;-webkit-text-stroke:0;
   filter:drop-shadow(0 0 1.2px var(--outline)) drop-shadow(0 0 1.2px var(--outline))}
