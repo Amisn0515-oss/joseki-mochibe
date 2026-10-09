@@ -917,6 +917,8 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
   overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
   background:rgba(30,18,62,.72);backdrop-filter:blur(2px)}
 .ask[hidden]{display:none}
+/* 本文のないダイアログで、すき間が空かないように */
+#askBody:empty{display:none}
 .ask-card{width:100%;max-width:320px;margin:auto;flex-shrink:0;
   display:flex;flex-direction:column;gap:13px;
   background:linear-gradient(var(--panel-2),var(--panel));
@@ -4738,12 +4740,7 @@ document.getElementById("jeToMovie").addEventListener("click",async e=>{
   const kifu=moves.join("");
   const same=(S.movies||[]).find(m=>m.s===kifu);
   if(same){ toast(`もうムービーにあります（${same.n}）`); return; }
-  /* ここは「写しを置く」だけ。もとの定石は消えないし、出題からも外れない。
-     「クイズには出ません」とだけ書くと、取り上げられたように読める */
-  const ok=await ask("ムービーに入れますか",
-    `<b>${j.n}</b> の手順を、ムービーにも置きます。`
-    +`<br>もとの定石はそのまま残り、クイズにも出ます。`
-    +`<br>ムービーに置いたほうは、見るだけのものです。`, "入れる");
+  const ok=await ask("ムービーにも入れますか？", "", "入れる");
   if(!ok) return;
   addMovie(j.n, kifu);
   toast("ムービーに入れました");
