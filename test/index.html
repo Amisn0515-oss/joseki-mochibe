@@ -1320,8 +1320,9 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
    絵は板の上からはみ出させる。切り抜きでもそうなっている        */
 .hcard{position:relative;font:inherit;cursor:pointer;overflow:visible;
   /* 横:縦 = 1.67:1。縦をいままでの4分の3にしている。
-     内側の余白は3pxまで詰めて、絵が板いっぱいに見えるようにする */
-  display:grid;aspect-ratio:1.667/1;padding:3px;overflow:hidden;
+     絵は板からはみ出させない決まりなので、大きくする手は余白を削ることだけ。
+     ふち（1.5px）があるので、内側の余白は0でも詰まって見えない        */
+  display:grid;aspect-ratio:1.667/1;padding:0;overflow:hidden;
   border:1.5px solid rgba(255,255,255,.9);border-radius:24px;
   box-shadow:
     inset 0 4px 0 rgba(255,255,255,.95),
