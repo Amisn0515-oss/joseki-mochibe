@@ -1038,7 +1038,6 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
   --glass:      rgba(255,255,255,.60);   /* 面。うしろの空が透ける */
   --glass-2:    rgba(255,255,255,.44);
   --glass-line: rgba(255,255,255,.92);   /* ふち。光が当たっている側 */
-  --glass-sh:   0 14px 30px -12px rgba(118,84,166,.46);
   --ink-g:      #5F4A8E;                 /* 淡い面にのせる文字 */
   --ink-g2:     #6B5A96;
   --card:       rgba(255,255,255,.90);   /* 札・玉のように、字を載せる面 */
@@ -1053,7 +1052,6 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
   --glass:      rgba(70,52,116,.56);
   --glass-2:    rgba(58,42,98,.44);
   --glass-line: rgba(255,255,255,.34);
-  --glass-sh:   0 14px 30px -12px rgba(10,4,30,.6);
   --ink-g:      #F3ECFF;
   --ink-g2:     #CDBCF0;
   --card:       rgba(66,48,112,.88);
@@ -1067,8 +1065,7 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
     --glass:      rgba(70,52,116,.56);
     --glass-2:    rgba(58,42,98,.44);
     --glass-line: rgba(255,255,255,.34);
-    --glass-sh:   0 14px 30px -12px rgba(10,4,30,.6);
-    --ink-g:      #F3ECFF;
+      --ink-g:      #F3ECFF;
     --ink-g2:     #CDBCF0;
     --card:       rgba(66,48,112,.88);
     --card-2:     rgba(54,38,94,.74);
@@ -1220,6 +1217,7 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
 
 /* ── 定石カード。白いすりガラスにして、空にのせる ── */
 #s-home .jcard{
+  min-height:150px;gap:5px;padding:7px 8px 8px;
   border:1.5px solid rgba(255,255,255,.82);border-radius:22px;
   /* 2枚かさねる。上＝天面の照り返し（中ほどで消える）／下＝カードの地 */
   background:
@@ -1237,7 +1235,6 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
     inset 0 2px 0 rgba(255,255,255,.9),
     0 2px 3px -2px rgba(168,124,214,.4),
     0 6px 12px -10px rgba(140,100,190,.4)}
-#s-home .jcard{min-height:150px;gap:5px;padding:7px 8px 8px}
 #s-home .jcard .jn{color:var(--ink-g);flex:none;font-size:11.5px;line-height:1.35;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 /* 盤のサムネ。カードの中ほどを埋める */
@@ -1266,9 +1263,8 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
 }
 .tabs-in{
   max-width:400px;margin:0 auto;gap:8px;padding:8px 10px;
-  border:1.5px solid var(--glass-line);border-radius:30px;
+  border:1.5px solid rgba(255,255,255,.6);border-radius:30px;
   background:linear-gradient(rgba(255,255,255,.3), rgba(255,255,255,.14));
-  border-color:rgba(255,255,255,.6);
   -webkit-backdrop-filter:blur(16px) saturate(1.4);
   backdrop-filter:blur(16px) saturate(1.4);
   box-shadow:0 10px 22px -16px rgba(110,78,160,.4),
