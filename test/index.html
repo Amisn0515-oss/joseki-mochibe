@@ -472,6 +472,12 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
 .field{display:flex;flex-direction:column;gap:9px}
 .hint{font-size:11.5px;color:#fff;line-height:1.6;opacity:.92;font-weight:500;
       text-shadow:0 1px 0 rgba(40,25,80,.5)}
+/* よるは地が沈むぶん、白字がパネルに溶けやすい。
+   字を濁らせず、影を強くして輪郭だけ立てる（昼はそのまま）        */
+:root[data-theme="dark"] .hint{opacity:1;text-shadow:0 1px 3px rgba(8,4,24,.9)}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .hint{opacity:1;text-shadow:0 1px 3px rgba(8,4,24,.9)}
+}
 .seg{display:flex;gap:6px}
 .seg button{flex:1;padding:9px 4px;border:3px solid var(--outline);border-radius:13px;
   font-family:"Mochiy Pop One",sans-serif;font-size:13px;color:#fff;
@@ -515,7 +521,7 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
 .tabs{transition:transform .18s ease}
 body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる */
 .tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;
-  background:linear-gradient(var(--panel-2),var(--panel));
+  background:linear-gradient(#FFC9E0,#F7A6C8);
   border-top:3px solid var(--outline);
   box-shadow:0 -4px 14px rgba(50,30,95,.25);
   padding:7px 0 calc(7px + env(safe-area-inset-bottom,0px))}
@@ -525,12 +531,12 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
   border:3px solid var(--outline);border-radius:14px;
   font-family:"Mochiy Pop One",sans-serif;font-size:11px;color:#fff;
   paint-order:stroke fill;-webkit-text-stroke:1.8px var(--outline);
-  background:linear-gradient(#C0A6E2,#9A7ECC);
-  box-shadow:0 4px 0 #6A479E, inset 0 2px 0 rgba(255,255,255,.35);
+  background:linear-gradient(#FFA8CB,#E87BA8);
+  box-shadow:0 4px 0 #BE5B84, inset 0 2px 0 rgba(255,255,255,.35);
   transition:transform .08s,box-shadow .08s}
 .tab[aria-selected="true"]{background:linear-gradient(var(--star),var(--gold));
   box-shadow:0 4px 0 var(--gold-dk), inset 0 2px 0 rgba(255,255,255,.75);transform:translateY(-2px)}
-.tab:active{transform:translateY(2px);box-shadow:0 1px 0 #6A479E}
+.tab:active{transform:translateY(2px);box-shadow:0 1px 0 #BE5B84}
 .tab svg{width:22px;height:22px;fill:none;stroke:#fff;stroke-width:3;
   stroke-linecap:round;stroke-linejoin:round;-webkit-text-stroke:0;
   filter:drop-shadow(0 0 1.2px var(--outline)) drop-shadow(0 0 1.2px var(--outline))}
@@ -796,6 +802,12 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
 .mv-seq i{font-style:normal;opacity:.45}
 .mv-seq i.done{opacity:1}
 .mv-seq i.now{opacity:1;background:var(--gold);border-radius:6px;padding:0 4px}
+/* よるは、地が暗いのに字もふちどりの色（ほぼ黒）だったので読めなかった。
+   明るい字に変える。いま打ったところだけは金色の地なので、字は暗いまま */
+:root[data-theme="dark"] .mv-seq{color:#EFE7FF}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .mv-seq{color:#EFE7FF}}
+:root[data-theme="dark"] .mv-seq i.now{color:#2A1F52}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .mv-seq i.now{color:#2A1F52}}
 /* つぎに移りますよ、の一行 */
 .mv-nextnote{margin-top:4px;font-weight:700}
 
@@ -1366,6 +1378,12 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
       </div>
       <div class="msgbox" id="mvMsg"><div class="s">一覧からえらぶと、ここに手順が出ます</div></div>
 
+      <!-- この手順を、よそへ持っていく -->
+      <div class="rowbar" id="mvPassBar" hidden>
+        <button class="btn sm pink" id="mvCopyKifu">棋譜をコピー</button>
+        <button class="btn sm lilac" id="mvToJoseki">クイズに入れる</button>
+      </div>
+
       <div class="panel field" id="mvTagBox" hidden>
         <div class="ribbon out sm">このムービーのタグ</div>
         <div class="mv-tags" id="mvTagList"></div>
@@ -1491,7 +1509,12 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
       <textarea class="tin ta" id="jeKifu" rows="2"
         placeholder="f5 d6 c3 d3 c4 f4"></textarea>
       <div class="rowbar">
-        <button class="btn sm lilac" id="jeKifuReset">もとの手順にもどす</button>
+        <button class="btn sm pink" id="jeKifuCopy">コピー</button>
+        <button class="btn sm lilac" id="jeKifuPaste">ペースト</button>
+      </div>
+      <div class="rowbar">
+        <button class="btn sm lilac" id="jeToMovie">ムービーへ</button>
+        <button class="btn sm lilac" id="jeKifuReset">もとにもどす</button>
       </div>
 
       <div class="je-label">タグ（この定石をどのモチに数えるか）</div>
@@ -3378,8 +3401,13 @@ function renderHome(animate){
           ? `<span class="lvtag ${lvClass(j.lv)}">${lvLabel(j.lv)}</span>` : "")
         +`<span class="jn">${j.n}</span>
         <span class="jbar"><i style="width:${pct}%"></i><span>${p.done}/${p.all}</span></span>`;
-      // カードを押すと、その定石だけを続きから始める
-      c.addEventListener("click",()=>startQuiz([id]));
+      // 押すと、その定石だけを続きから始める。
+      // 長おしすると、せっていを開く（押しっぱなしの間に指が動いたら、やめる）
+      c.addEventListener("click",()=>{
+        if(c.dataset.held){ delete c.dataset.held; return; }   // 長おしのあとの指はなれ
+        startQuiz([id]);
+      });
+      holdToEdit(c, id);
       grid.appendChild(c);
     }
   }
@@ -3971,6 +3999,28 @@ function mvCard(j){
   return a;
 }
 
+/* 長おしで、その定石のせっていを開く。
+   指が動いたとき・離したときは取りやめる。スクロールと見分けるため */
+function holdToEdit(el, id){
+  let t=null;
+  const stop=()=>{ if(t){ clearTimeout(t); t=null; } };
+  el.addEventListener("pointerdown",e=>{
+    if(e.button) return;
+    stop();
+    t=setTimeout(()=>{
+      t=null; el.dataset.held="1";       // このあとの click は、くいずにしない
+      if(navigator.vibrate) navigator.vibrate(12);
+      openJEdit(id);
+    }, 500);
+  });
+  for(const ev of ["pointerup","pointercancel","pointerleave","pointermove"])
+    el.addEventListener(ev, e=>{
+      if(ev==="pointermove" && Math.abs(e.movementX)+Math.abs(e.movementY)<4) return;
+      stop();
+    });
+  el.addEventListener("contextmenu",e=>e.preventDefault());   // 長おしのメニューを出さない
+}
+
 /** 一覧を描く */
 function mvRenderList(){
   // 消したタグで絞ったままだと、何も出ない画面で止まってしまう
@@ -4046,6 +4096,7 @@ function mvRender(){
     document.getElementById("mvTurn").innerHTML="定石をえらんでください";
     document.getElementById("mvDelNow").hidden=true;   // 消すものが無い
     document.getElementById("mvTagBox").hidden=true;
+    document.getElementById("mvPassBar").hidden=true;
     document.getElementById("mvMsg").innerHTML=
       `<div class="s">下の一覧から定石をえらぶと、ここに手順が出ます</div>`;
     return;
@@ -4070,6 +4121,7 @@ function mvRender(){
   // 自分で足したものだけ、ここから消せる・タグを付けられる
   document.getElementById("mvDelNow").hidden = !j.movieOnly;
   document.getElementById("mvTagBox").hidden = !j.movieOnly;
+  document.getElementById("mvPassBar").hidden = false;
   if(j.movieOnly) mvRenderTags();
 }
 
@@ -4115,6 +4167,7 @@ function mvRecMode(on){
   document.getElementById("mvPlayBar").hidden=on;
   document.getElementById("mvSpeed").hidden=on;
   document.getElementById("mvNextBox").hidden=on;
+  document.getElementById("mvPassBar").hidden=on;
   document.getElementById("mvAdd").hidden=true;
   document.getElementById("mvMaker").hidden=true;
   document.getElementById("mvDelNow").hidden=true;
@@ -4157,6 +4210,14 @@ function mvLoad(jid){
   mvShow("play");
   mvRender(); mvRenderNext(); mvRenderAuto();
   mvPlayPause();                     // 切り替わったら、かならず動きだす
+}
+
+/** 棋譜を写しとる。うまくいったかをボタンの字で知らせる */
+async function copyKifu(text, btn){
+  const old=btn.textContent;
+  try{ await navigator.clipboard.writeText(text); btn.textContent="コピーしました"; }
+  catch(_){ btn.textContent="コピーできませんでした"; }
+  setTimeout(()=>{ btn.textContent=old; }, 1400);
 }
 
 /** いま見ているムービーのタグを描く */
@@ -4307,6 +4368,22 @@ document.getElementById("btnMovieBack").addEventListener("click",()=>{
   go("home");
 });
 document.getElementById("mvBackToList").addEventListener("click",()=>{ mvStop(); mvShow("list"); });
+/* ── この手順を、よそへ持っていく ── */
+document.getElementById("mvCopyKifu").addEventListener("click",e=>{
+  const j=movieById(MV.jid); if(!j) return;
+  copyKifu(spaceKifu(j.s), e.currentTarget);
+});
+document.getElementById("mvToJoseki").addEventListener("click",async e=>{
+  const j=movieById(MV.jid); if(!j) return;
+  const ok=await ask("クイズに入れますか",
+    `<b>${j.n}</b> を、${DAYS[editDay]}曜日の出題に足します。`
+    +`<br>あとから「出題する定石」で曜日を変えられます。`, "入れる");
+  if(!ok) return;
+  addCustom(j.n, j.moves.slice());
+  renderHome(false);
+  toast(`${DAYS[editDay]}曜日に入れました`);
+});
+
 document.getElementById("mvTagAdd").addEventListener("click",()=>{
   const el=document.getElementById("mvTagIn");
   mvTagSet(el.value, true); el.value="";
@@ -4650,6 +4727,25 @@ document.querySelectorAll("#jeSide button").forEach(b=>b.addEventListener("click
 document.getElementById("jeCancel").addEventListener("click",closeJEdit);
 document.getElementById("jeOk").addEventListener("click",saveJEdit);
 document.getElementById("jeKifu").addEventListener("input",renderJEdit);
+document.getElementById("jeKifuCopy").addEventListener("click",e=>{
+  copyKifu(document.getElementById("jeKifu").value.trim(), e.currentTarget);
+});
+document.getElementById("jeKifuPaste").addEventListener("click",()=>{
+  pasteInto(document.getElementById("jeKifu"), null);
+  setTimeout(renderJEdit, 60);          // 貼ったあと、手数の見積もりを出しなおす
+});
+document.getElementById("jeToMovie").addEventListener("click",async e=>{
+  const j=byId[editingJid]; if(!j) return;
+  const typed=parseKifu(document.getElementById("jeKifu").value);
+  const v=validateMoves(typed);
+  const moves = (v.ok && typed[0]==="f5") ? typed : j.moves;   // 直し途中なら、元のほうを使う
+  const ok=await ask("ムービーに入れますか",
+    `<b>${j.n}</b> をムービーに足します。`
+    +`<br>クイズには出ませんし、モチやタグの本数にも入りません。`, "入れる");
+  if(!ok) return;
+  addMovie(j.n, moves.join(""));
+  toast("ムービーに入れました");
+});
 document.getElementById("jeKifuReset").addEventListener("click",()=>{
   document.getElementById("jeKifu").value=spaceKifu(origKifu(editingJid));
   renderJEdit();
@@ -4660,19 +4756,20 @@ document.getElementById("jeKifuReset").addEventListener("click",()=>{
    iPhone では押した直後に「ペーストを許可しますか」と出ることがある。
    読ませてもらえない端末もあるので、そのときは手で貼ってもらう案内を出す。 */
 async function pasteInto(el, resultId){
+  // 知らせる場所が無いとき（ダイアログの中など）は、帯で知らせる
+  const tell=(msg)=>{
+    if(resultId && document.getElementById(resultId)) showResult(resultId, false, "✕ "+msg);
+    else toast(msg.replace(/<br>/g, " "));
+  };
   try{
     const t = await navigator.clipboard.readText();
-    if(!t || !t.trim()){
-      showResult(resultId, false, "✕ クリップボードが からっぽです。");
-      return;
-    }
+    if(!t || !t.trim()){ tell("クリップボードが からっぽです。"); return; }
     el.value=t.trim();
-    document.getElementById(resultId).hidden=true;
+    const box = resultId && document.getElementById(resultId);
+    if(box) box.hidden=true;
     el.focus(); el.setSelectionRange(el.value.length, el.value.length);
   }catch(e){
-    showResult(resultId, false,
-      "✕ この端末からはクリップボードを読めませんでした。<br>"
-      + "入力欄を長おしして「ペースト」を選んでください。");
+    tell("この端末からはクリップボードを読めませんでした。<br>入力欄を長おしして「ペースト」を選んでください。");
   }
 }
 
