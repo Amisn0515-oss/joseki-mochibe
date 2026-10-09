@@ -2890,11 +2890,26 @@ function buildFamilies(){
   });
 }
 
+/* けいとうのモチと中身がほとんど同じタグ。
+   うさぎ86% / とら88% / ねずみ75% が重なっていて、
+   ずかんに見分けのつかない2体が並んでいた。モチは1体にまとめる。
+   タグ自体は残すので、定石のタグ選びには今までどおり出る。      */
+const FAM_MERGE={ "兎":"k:うさぎもち", "虎":"k:とらもち", "ネズミ":"k:ねずみもち" };
+
+/** まとめる前に保存した名前を、まとめたあとの名前に読みかえる */
+function mergeKeys(a){
+  return [...new Set((a||[]).map(k=>{
+    const m=/^j:(.+)$/.exec(k);
+    return (m && FAM_MERGE[m[1]]) || k;
+  }))];
+}
+
 /** けいとうのモチ ＋ 定石のモチ。画面はいつもこちらを見る */
 let MOCHI=[];
 function buildMochiList(){
   buildFamilies();
-  MOCHI=[...FORMS.map(f=>Object.assign({key:"k:"+f.n, hue:0}, f)), ...FAMS];
+  MOCHI=[...FORMS.map(f=>Object.assign({key:"k:"+f.n, hue:0}, f)),
+         ...FAMS.filter(f=>!FAM_MERGE[f.fam])];
 }
 
 /** その定石を「おぼえた」ことにしてよいか（出題されるところを全部当てた） */
@@ -3013,6 +3028,12 @@ if(Array.isArray(S.seenForms) && S.seenForms.some(x=>typeof x==="number"))
 if(typeof S.form==="number") S.form=FORMS[S.form] ? "k:"+FORMS[S.form].n : "k:こもち";
 // 1体だけだったものを、複数えらべる形に移す
 if(!Array.isArray(S.forms)) S.forms = S.form ? [S.form] : ["k:こもち"];
+/* まとめたモチの古い名前を、新しい名前にそろえる。
+   ここを通さないと、兎もちをホームに出していた人のホームが
+   こもちに戻ってしまい、ずかんの数も減って見える。           */
+S.forms=mergeKeys(S.forms);
+if(Array.isArray(S.seenForms)) S.seenForms=mergeKeys(S.seenForms);
+if(S.form) S.form=mergeKeys([S.form])[0];
 if(!Array.isArray(S.seenForms)){
   S.seenForms=[];
   MOCHI.forEach((f,i)=>{ if(formOpen(i)) S.seenForms.push(f.key); });
@@ -4254,7 +4275,7 @@ function mergeBackup(d){
 
   S.total =Math.max(S.total |0, d.total |0);
   S.streak=Math.max(S.streak|0, d.streak|0);
-  S.seenForms=[...new Set([...(S.seenForms||[]), ...(d.seenForms||[])])];
+  S.seenForms=mergeKeys([...(S.seenForms||[]), ...(d.seenForms||[])]);
   return added;
 }
 
