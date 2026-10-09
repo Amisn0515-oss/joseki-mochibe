@@ -4739,11 +4739,18 @@ document.getElementById("jeToMovie").addEventListener("click",async e=>{
   const typed=parseKifu(document.getElementById("jeKifu").value);
   const v=validateMoves(typed);
   const moves = (v.ok && typed[0]==="f5") ? typed : j.moves;   // 直し途中なら、元のほうを使う
+  // 同じ手順がもうムービーにあるなら、二重に増やさない
+  const kifu=moves.join("");
+  const same=(S.movies||[]).find(m=>m.s===kifu);
+  if(same){ toast(`もうムービーにあります（${same.n}）`); return; }
+  /* ここは「写しを置く」だけ。もとの定石は消えないし、出題からも外れない。
+     「クイズには出ません」とだけ書くと、取り上げられたように読める */
   const ok=await ask("ムービーに入れますか",
-    `<b>${j.n}</b> をムービーに足します。`
-    +`<br>クイズには出ませんし、モチやタグの本数にも入りません。`, "入れる");
+    `<b>${j.n}</b> の手順を、ムービーにも置きます。`
+    +`<br>もとの定石はそのまま残り、クイズにも出ます。`
+    +`<br>ムービーに置いたほうは、見るだけのものです。`, "入れる");
   if(!ok) return;
-  addMovie(j.n, moves.join(""));
+  addMovie(j.n, kifu);
   toast("ムービーに入れました");
 });
 document.getElementById("jeKifuReset").addEventListener("click",()=>{
