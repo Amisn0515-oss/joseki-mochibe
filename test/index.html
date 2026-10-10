@@ -2020,6 +2020,13 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
         <button class="btn sm lilac" id="mvToJoseki">クイズに入れる</button>
       </div>
 
+      <!-- e6始点のときだけ出す -->
+      <button class="mv-auto" id="mvF5" role="switch" aria-checked="false" hidden>
+        <span class="mv-auto-t">このムービーは f5 からにする
+          <small>ほかは e6 のまま。この1本だけ向きを戻します</small></span>
+        <span class="mv-auto-s"><i></i></span>
+      </button>
+
       <div class="panel field" id="mvTagBox" hidden>
         <div class="ribbon out sm">このムービーのタグ</div>
         <div class="mv-tags" id="mvTagList"></div>
@@ -2140,6 +2147,13 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
         <button data-v="black"><span class="sd b"></span>くろ</button>
         <button data-v="white"><span class="sd w"></span>しろ</button>
       </div>
+
+      <!-- e6始点のときだけ出す。f5始点の人には、押しても何も変わらない -->
+      <button class="mv-auto" id="jeF5" role="switch" aria-checked="false" hidden>
+        <span class="mv-auto-t">この定石は f5 からにする
+          <small>ほかは e6 のまま。この1本だけ向きを戻します</small></span>
+        <span class="mv-auto-s"><i></i></span>
+      </button>
 
       <div class="je-label">きふ（手順）</div>
       <textarea class="tin ta" id="jeKifu" rows="2"
@@ -2273,8 +2287,14 @@ const SYMMUL=[[0,1,2,3],[1,0,3,2],[2,3,0,1],[3,2,1,0]];
 
 let ORIGIN="f5";        // 起動時に保存から読みなおす
 let RUNSYM=0;           // 出題中、本人が選んだ向き（d6 ではなく f4 を打った、など）
+/* いま出している1本だけ、はじめの手を上書きする。
+   e6始点の人が「この定石はf5で」と決めたときに "f5" が入る。
+   描くところで立てて、描き終わったら null に戻す。          */
+let ORIGIN_OVR=null;
+/** いま実際に使うはじめの手 */
+const effOrigin = () => ORIGIN_OVR || ORIGIN;
 /** いま画面に出すときの折り返し＝はじめの手の設定 ＋ 出題中に選ばれた向き */
-const curSym = () => SYMMUL[ORIGIN==="e6" ? 2 : 0][RUNSYM];
+const curSym = () => SYMMUL[effOrigin()==="e6" ? 2 : 0][RUNSYM];
 const flipped = () => curSym()!==0;
 /** 行と列を折り返す。折り返しは2回かけると元に戻る（自分が逆の操作） */
 const fRC = (r,c) => SYMS[curSym()].t(r,c);
@@ -2309,7 +2329,12 @@ function sameMoveUnderSym(board, want, got){
 /** 棋譜ぜんたいを折り返す */
 const fKifu = s => (String(s||"").match(/../g)||[]).map(fSq).join("");
 /** 画面に出す「はじめの手」。説明文やお手本の棋譜に使う */
-const originSq = () => ORIGIN;
+const originSq = () => effOrigin();
+/** その1本を、いま何始点で出すか。
+    e6設定のときだけ、1本ずつ f5 に戻せる                */
+const originOf = id => (ORIGIN==="e6" && (S.jf5||{})[id]) ? "f5" : ORIGIN;
+/** その1本ぶんの上書きを立てる。f5設定の人は、いつも素通り */
+const useOrigin = id => { ORIGIN_OVR = (originOf(id)==="f5" && ORIGIN==="e6") ? "f5" : null; };
 const originSample = () => fKifu("f5d6c5f4e3c6d3f6e6d7");
 const toSq = (r,c) => String.fromCharCode(97+c)+(r+1);
 
@@ -2894,6 +2919,8 @@ if(!S.pos)     S.pos={};
 delete S.cleared;                   // 「その日は出さない」仕様は取りやめ
 delete S.resume;                    // 以前の「全体で1つ」の記録は使わない
 if(!S.side)    S.side={};
+/* e6始点のとき、この1本だけ f5 で出す、という控え */
+if(!S.jf5)     S.jf5={};
 if(!S.rename)  S.rename={};
 // 以前は「何手目から」がアプリ全体で1つだった。定石ごとの設定に移しかえる
 if(S.startMode==="move" && S.startMove>1){
@@ -4294,6 +4321,7 @@ function msg(title,sub,cls){
 
 function showQ(){
   const q=Q.list[Q.i], j=byId[q.jid], stt=j.states[q.k];
+  useOrigin(q.jid);          // この定石だけ f5 に戻す設定なら、ここで立てる
   Q.revealed=false; Q.answered=false; Q.wrong=0;
 
   document.getElementById("qName").textContent=j.n;
@@ -4333,7 +4361,9 @@ function showQ(){
 
 function answer(r,c){
   if(Q.answered||Q.revealed) return;
-  const q=Q.list[Q.i], j=byId[q.jid], stt=j.states[q.k], sq=toSq(r,c), dsq=fSq(sq);
+  const q=Q.list[Q.i];
+  useOrigin(q.jid);        // マスの読みかえに使うので、ここで立て直す
+  const j=byId[q.jid], stt=j.states[q.k], sq=toSq(r,c), dsq=fSq(sq);
 
   if(!flips(stt.board,r,c,stt.player).length){
     const cell=cellAt(r,c); cell.classList.add("ng");
@@ -4391,6 +4421,7 @@ function reveal(){
     if(S.att && S.att[S.run.jid]) S.att[S.run.jid].revealed=true;
   }
   const q=Q.list[Q.i], j=byId[q.jid];
+  useOrigin(q.jid);        // 盤を描き直すので、ここでも立て直す
   paint(j.states[q.k].board, q.k>0 ? j.moves[q.k-1] : null);
   const rest=[];
   for(let k=q.k;k<j.moves.length;k++){
@@ -4517,6 +4548,7 @@ async function finish(){
    7. 画面の切りかえ
    ========================================================================= */
 function go(name){
+  ORIGIN_OVR=null;       // 画面を移ったら、1本ぶんの上書きは外す
   for(const s of document.querySelectorAll(".screen")) s.classList.toggle("on", s.id===`s-${name}`);
   if(name!=="movie") document.body.classList.remove("mv-wide");   // 広げるのはムービーの一覧だけ
   // せってい はタブに無くホームから開くので、その間はホームを点灯させておく
@@ -4603,6 +4635,7 @@ function mergeBackup(d){
   S.rename =M(S.rename , d.rename);
   S.startAt=M(S.startAt, d.startAt);
   S.side   =M(S.side   , d.side);
+  S.jf5    =M(S.jf5    , d.jf5);
   S.fam    =M(S.fam    , d.fam);
 
   // 自作の定石は、手順が同じものを二重に足さない
@@ -4667,6 +4700,9 @@ const MVREC={on:false, moves:[]};
 
 /** 最後の局面の小さな盤。空マスは描かず、石だけ置く（軽くするため） */
 function boardThumb(j){
+  /* 一覧の絵は、いろいろな定石が混ざって並ぶ。
+     1枚ごとに、その定石の設定で折り返して、描き終わったら戻す */
+  const keep=ORIGIN_OVR; useOrigin(j.id);
   const b=j.states[j.states.length-1].board;
   let st="";
   for(let r=0;r<8;r++) for(let c=0;c<8;c++){
@@ -4676,6 +4712,7 @@ function boardThumb(j){
   }
   let ln="";
   for(let i=1;i<8;i++) ln+=`M${i*12} 0V96M0 ${i*12}H96`;
+  ORIGIN_OVR=keep;
   return `<svg class="thumb" viewBox="0 0 96 96" aria-hidden="true">`
        + `<rect width="96" height="96" rx="8" class="tb"/>`
        + `<path class="tl" d="${ln}"/>${st}</svg>`;
@@ -4878,7 +4915,9 @@ function mvRender(){
   if(!document.getElementById("mvBoard").children.length) return;
   if(MVREC.on){ mvRecRender(); return; }      // 録っている間は、打った手を映す
   const j=movieById(MV.jid);
+  useOrigin(MV.jid);         // このムービーだけ f5 に戻す設定なら、ここで立てる
   if(!j){
+    ORIGIN_OVR=null;
     paintIn("mvBoard", startBoard(), null);
     document.getElementById("mvTurn").innerHTML="定石をえらんでください";
     document.getElementById("mvDelNow").hidden=true;   // 消すものが無い
@@ -4888,6 +4927,10 @@ function mvRender(){
       `<div class="s">下の一覧から定石をえらぶと、ここに手順が出ます</div>`;
     return;
   }
+  const f5b=document.getElementById("mvF5");
+  f5b.hidden = ORIGIN!=="e6";                 // f5始点の人には出さない
+  f5b.setAttribute("aria-checked", (S.jf5||{})[MV.jid] ? "true" : "false");
+
   const k=Math.max(0, Math.min(MV.k, j.moves.length));
   const st=j.states[k];
   paintIn("mvBoard", st.board, k>0 ? j.moves[k-1] : null);
@@ -5335,19 +5378,28 @@ function renderReg(){
 /* ── 定石ごとの設定 ────────────────────────────────────
    一覧の行をタップすると開く。名前と「何手目から出すか」をここで決める。
    もとの定石データは書きかえず、S.rename と S.startAt に控えるだけにしてある   */
-let editingJid=null, jeStart=1, jeSideV="both", jeTagV="";
+let editingJid=null, jeStart=1, jeSideV="both", jeTagV="", jeF5V=false;
 
 function openJEdit(id){
   const j=byId[id]; if(!j) return;
   editingJid=id; jeStart=startAtOf(j); jeSideV=sideOf(j);
   jeTagV=(S.fam||{})[id] || "";        // 空＝名前から自動で決める
+  jeF5V=!!(S.jf5||{})[id];
+  ORIGIN_OVR = (ORIGIN==="e6" && jeF5V) ? "f5" : null;
   document.getElementById("jeKifu").value=spaceKifu(j.s);
+  ORIGIN_OVR=null;
   document.getElementById("jeName").value=j.n;
   renderJEdit();
   document.getElementById("jedit").hidden=false;
 }
 function renderJEdit(){
   const j=byId[editingJid]; if(!j) return;
+  /* この定石を f5 で出す設定なら、ダイアログの中もぜんぶ f5 で見せる。
+     棋譜の欄も「1手目は f5」も、そろっていないと混乱するため      */
+  ORIGIN_OVR = (ORIGIN==="e6" && jeF5V) ? "f5" : null;
+  const f5b=document.getElementById("jeF5");
+  f5b.hidden = ORIGIN!=="e6";                 // f5始点の人には出さない
+  f5b.setAttribute("aria-checked", jeF5V ? "true" : "false");
   // 入力中の棋譜で考える。打てない手が混じっていたら、きめるを押させない
   const typed=parseKifu(document.getElementById("jeKifu").value);
   const v=validateMoves(typed);
@@ -5389,19 +5441,26 @@ function renderJEdit(){
   document.getElementById("jeOk").disabled = !!kifuNG || cnt===0;
   document.getElementById("jeKifuReset").disabled =
     moves.join("")===origKifu(j.id);
+  ORIGIN_OVR=null;
 }
 function closeJEdit(){ document.getElementById("jedit").hidden=true; editingJid=null; }
 function saveJEdit(){
   if(!editingJid) return;
   const id=editingJid;
+  /* 棋譜の欄は「見せる向き」で書いてある。
+     この定石の向きで読まないと、向きの違う手順を保存してしまう */
+  ORIGIN_OVR = (ORIGIN==="e6" && jeF5V) ? "f5" : null;
   const nm=document.getElementById("jeName").value.trim();
   if(nm && nm!==origName(id)) S.rename[id]=nm; else delete S.rename[id];
   if(jeStart>1) S.startAt[id]=jeStart; else delete S.startAt[id];
   if(jeSideV!=="both") S.side[id]=jeSideV; else delete S.side[id];
   if(jeTagV) S.fam[id]=jeTagV; else delete S.fam[id];
+  if(!S.jf5) S.jf5={};
+  if(jeF5V) S.jf5[id]=true; else delete S.jf5[id];
 
   // 手順を直したときは、この定石の記録を数えなおす（手数が変わると問題がずれる）
   const typed=parseKifu(document.getElementById("jeKifu").value).join("");
+  ORIGIN_OVR=null;
   if(typed && typed!==byId[id].s){
     snapshot("きふを直す");
     for(const k of Object.keys(S.solved))  if(k.startsWith(id+":")) delete S.solved[k];
@@ -5508,6 +5567,30 @@ document.getElementById("btnSelCancel").addEventListener("click",()=>{
   selMode=false; selected.clear(); renderReg(); });
 document.getElementById("btnDel").addEventListener("click",removeSelected);
 document.getElementById("btnUndo").addEventListener("click",undoLast);
+/* f5 と e6 を切りかえたら、棋譜の欄も書きなおす。
+   欄の字は「見せる向き」なので、
+   ① いまの向きで読んで、中のかたち（f5のまま）に戻す
+   ② 向きを切りかえる
+   ③ 新しい向きで書きなおす  の順にしないと手がずれる     */
+document.getElementById("jeF5").addEventListener("click",()=>{
+  if(!editingJid) return;
+  const box=document.getElementById("jeKifu");
+  ORIGIN_OVR = (ORIGIN==="e6" && jeF5V) ? "f5" : null;
+  const raw=parseKifu(box.value).join("");          // ①
+  jeF5V=!jeF5V;                                     // ②
+  ORIGIN_OVR = (ORIGIN==="e6" && jeF5V) ? "f5" : null;
+  box.value=spaceKifu(raw);                         // ③
+  ORIGIN_OVR=null;
+  renderJEdit();
+});
+/* ムービー側。こちらは棋譜の欄が無いので、押したらすぐ保存して描き直す */
+document.getElementById("mvF5").addEventListener("click",()=>{
+  if(!MV.jid) return;
+  if(!S.jf5) S.jf5={};
+  if(S.jf5[MV.jid]) delete S.jf5[MV.jid]; else S.jf5[MV.jid]=true;
+  save();
+  mvRender();
+});
 document.getElementById("jeMinus").addEventListener("click",()=>{ jeStart--; renderJEdit(); });
 document.getElementById("jePlus").addEventListener("click",()=>{ jeStart++; renderJEdit(); });
 document.querySelectorAll("#jeSide button").forEach(b=>b.addEventListener("click",()=>{
