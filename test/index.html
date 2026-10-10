@@ -975,8 +975,12 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
 .mv-auto-s i{position:absolute;top:1px;left:1px;width:19px;height:19px;border-radius:50%;
   background:linear-gradient(#FFF,#FFE6F2);border:2px solid var(--outline);
   transition:transform .14s cubic-bezier(.3,1.4,.6,1)}
-.mv-auto.on .mv-auto-s{background:linear-gradient(#9CEDD4,var(--mint))}
-.mv-auto.on .mv-auto-s i{transform:translateX(21px)}
+/* 入っているときは、玉を右へ。
+   .on でも aria-checked でも効くようにしておく        */
+.mv-auto.on .mv-auto-s,
+.mv-auto[aria-checked="true"] .mv-auto-s{background:linear-gradient(#9CEDD4,var(--mint))}
+.mv-auto.on .mv-auto-s i,
+.mv-auto[aria-checked="true"] .mv-auto-s i{transform:translateX(21px)}
 
 /* 再生のとき、盤以外の合計が約330px。盤はその残り */
 #s-movie .boardframe{width:min(100%, max(230px, calc(100svh - 330px)))}
