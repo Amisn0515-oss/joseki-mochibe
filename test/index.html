@@ -904,10 +904,11 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
 
 /* 自動さいせいのつまみ */
 .mv-auto{display:flex;align-items:center;justify-content:space-between;gap:10px;
-  width:100%;font:inherit;cursor:pointer;padding:8px 12px;border-radius:14px;
-  border:3px solid var(--outline);
-  background:linear-gradient(var(--panel-2),var(--panel));
-  box-shadow:0 3px 0 var(--panel-dk), inset 0 2px 0 rgba(255,255,255,.35)}
+  width:100%;font:inherit;cursor:pointer;padding:9px 13px;border-radius:18px;
+  /* ほかの面と同じすりガラス。地が濃いままだと、濃い紫の文字が読めない */
+  border:1.5px solid var(--glass-line);
+  background:linear-gradient(var(--card), var(--card-2));
+  box-shadow:0 8px 16px -9px rgba(140,100,190,.5), inset 0 1.5px 0 #fff}
 .mv-auto-t{font-family:"Mochiy Pop One",sans-serif;font-size:12.5px;color:#fff;
   text-align:left;paint-order:stroke fill;-webkit-text-stroke:2px var(--outline)}
 .mv-auto-t small{display:block;font-family:inherit;font-size:10px;opacity:.9;
@@ -1047,8 +1048,12 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
 #askBody:empty{display:none}
 .ask-card{width:100%;max-width:320px;margin:auto;flex-shrink:0;
   display:flex;flex-direction:column;gap:13px;
-  background:linear-gradient(var(--panel-2),var(--panel));
-  border:3px solid var(--outline);border-radius:20px;padding:18px 17px;
+  /* うしろに暗幕が敷かれるので、パネルより濃い --card を使う。
+     --glass（白60%）だと暗幕が透けて、文字が読めなくなる */
+  background:linear-gradient(var(--card), var(--card-2));
+  -webkit-backdrop-filter:blur(13px) saturate(1.35);
+  backdrop-filter:blur(13px) saturate(1.35);
+  border:1.5px solid var(--glass-line);border-radius:24px;padding:18px 17px;
   box-shadow:0 6px 0 var(--panel-dk), 0 16px 26px -8px rgba(20,10,45,.6),
              inset 0 3px 0 rgba(255,255,255,.34)}
 .ask-title{font-size:17px;text-align:center}
@@ -1112,8 +1117,9 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
 }
 
 /* =========================================================================
-   ホームの作り直し（透明感・光沢）
-   ここから下は #s-home と下タブだけに効く。ほかの画面は上のままにしてある。
+   透明感・光沢（全画面）
+   もとはホームだけに効かせていたが、全ページとダイアログに広げた。
+   きょうの定石カードと復習ボタンは、ホームにしか出ないので限定のまま。
    ========================================================================= */
 :root{
   --glass:      rgba(255,255,255,.60);   /* 面。うしろの空が透ける */
@@ -1157,8 +1163,8 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
 }
 
 /* ── 面のきほん。パネル・HUD・舞台で共通 ── */
-#s-home .panel,
-#s-home .hud{
+.panel,
+.hud{
   border:1.5px solid var(--glass-line);
   border-radius:26px;
   background:linear-gradient(var(--glass), var(--glass-2));
@@ -1168,58 +1174,58 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
              inset 0 1.5px 0 rgba(255,255,255,.9),
              inset 0 -16px 26px -20px rgba(150,110,200,.4);
 }
-#s-home .hud{border-radius:99px;padding:7px 10px}
+.hud{border-radius:99px;padding:7px 10px}
 
 /* ── 文字。淡い面には濃い紫をのせる ── */
 #s-home .out,
-#s-home .ribbon,
-#s-home .hud-name,
-#s-home .lvl b,
-#s-home .xp span,
-#s-home .coin b,
-#s-home .empty{
+.ribbon,
+.hud-name,
+.lvl b,
+.xp span,
+.coin b,
+.empty{
   color:var(--ink-g);
   -webkit-text-stroke:0;
   text-shadow:0 1px 0 rgba(255,255,255,.75);
 }
-#s-home .hint,
-#s-home .daynote{color:var(--ink-g2);text-shadow:none;opacity:1;font-weight:600}
+.hint,
+.daynote{color:var(--ink-g2);text-shadow:none;opacity:1;font-weight:600}
 
 /* ── 見出しの札。金色の帯をやめ、白い光の札に ── */
-#s-home .ribbon{
+.ribbon{
   background:linear-gradient(var(--card), var(--card-2));
   border:1.5px solid var(--glass-line);
   box-shadow:0 8px 16px -8px rgba(140,100,190,.5),
              inset 0 1.5px 0 #fff;
   font-size:14.5px;padding:5px 18px;
 }
-#s-home .daynav svg{stroke:var(--ink-g);stroke-width:3}
+.daynav svg{stroke:var(--ink-g);stroke-width:3}
 
 /* ── レベルの札と、★♥の玉 ── */
-#s-home .lvl{
+.lvl{
   border:1.5px solid var(--glass-line);border-radius:18px;
   background:linear-gradient(#FFF4D2,#FFD98E);
   box-shadow:0 6px 12px -6px rgba(190,140,60,.6), inset 0 2px 0 rgba(255,255,255,.95);
 }
-#s-home .lvl b{color:#8A5A12;text-shadow:0 1px 0 rgba(255,255,255,.8)}
-#s-home .lvl small{color:#A8782E}
-#s-home .coin{
+.lvl b{color:#8A5A12;text-shadow:0 1px 0 rgba(255,255,255,.8)}
+.lvl small{color:#A8782E}
+.coin{
   background:linear-gradient(var(--card), var(--card-2));
   border:1.5px solid var(--glass-line);
   box-shadow:0 5px 10px -5px rgba(140,100,190,.45), inset 0 1.5px 0 #fff;
 }
-#s-home .coin i{border:0;box-shadow:inset 0 -2px 4px rgba(170,110,60,.35),
+.coin i{border:0;box-shadow:inset 0 -2px 4px rgba(170,110,60,.35),
                                    inset 0 2px 0 rgba(255,255,255,.9)}
-#s-home .coin i.fire{box-shadow:inset 0 -2px 4px rgba(190,80,130,.35),
+.coin i.fire{box-shadow:inset 0 -2px 4px rgba(190,80,130,.35),
                                 inset 0 2px 0 rgba(255,255,255,.9)}
 
 /* ── 進みの帯。くぼみを浅くして、すっきり見せる ── */
-#s-home .xp{
+.xp{
   height:18px;border:1.5px solid rgba(255,255,255,.8);
   background:rgba(255,255,255,.42);
   box-shadow:inset 0 2px 5px rgba(130,100,180,.3);
 }
-#s-home .xp span{color:var(--ink-g);text-shadow:0 1px 0 rgba(255,255,255,.7)}
+.xp span{color:var(--ink-g);text-shadow:0 1px 0 rgba(255,255,255,.7)}
 
 /* ── 図鑑とムービーの入口。つるんとした角丸の四角に ── */
 #s-home .bookbtn{
@@ -1234,7 +1240,7 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
 #s-home .bookbtn .bcount{color:#8A5A12}
 
 /* ── ボタン。厚みの色ベタをやめ、上面の光沢と柔らかい影にする ── */
-#s-home .btn{
+.btn{
   color:var(--ink-btn);-webkit-text-stroke:0;
   text-shadow:0 1px 0 rgba(255,255,255,.8);
   border:1.5px solid rgba(255,255,255,.92);
@@ -1250,25 +1256,25 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
     0 16px 26px -12px rgba(140,100,190,.5);
   transition:transform .1s ease, box-shadow .1s ease;
 }
-#s-home .btn:active{transform:translateY(4px);
+.btn:active{transform:translateY(4px);
   box-shadow:
     inset 0 2px 0 rgba(255,255,255,.9),
     inset 0 -8px 12px -10px var(--edge),
     0 2px 4px -2px var(--edge),
     0 6px 12px -8px rgba(140,100,190,.45)}
 /* 上面の照り返し。中央がいちばん明るい、あめ玉のような光り方 */
-#s-home .btn::before{content:"";position:absolute;left:7%;right:7%;top:3px;height:46%;
+.btn::before{content:"";position:absolute;left:7%;right:7%;top:3px;height:46%;
   border-radius:99px / 70px;pointer-events:none;
   background:radial-gradient(120% 100% at 50% 0%,
     rgba(255,255,255,.95) 0%, rgba(255,255,255,.45) 45%, rgba(255,255,255,0) 100%);}
 /* 大ボタンは、天面の光をさらに細く・強くする。
    面ぜんたいを一様に白くすると、かえって平らに見えるため            */
-#s-home .btn.big::before{left:10%;right:10%;top:4px;height:34%;
+.btn.big::before{left:10%;right:10%;top:4px;height:34%;
   border-radius:99px / 44px;
   background:linear-gradient(rgba(255,255,255,1) 0%, rgba(255,255,255,.62) 38%,
                              rgba(255,255,255,.06) 100%);}
 /* いちばん押してほしいので、ここだけ厚みも照りも一段強くする */
-#s-home .btn.big{
+.btn.big{
   background:linear-gradient(#FFE2F4 0%, #FFB4DD 46%, #F07FC3 100%);
   font-size:20px;padding:19px;border-radius:30px;
   /* 天面の光（上）／左右の側面の落ち込み／下側の陰／厚み／落ちる影 */
@@ -1281,15 +1287,15 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
     0 9px 12px -5px rgba(226,124,182,.9),
     0 24px 34px -14px rgba(190,90,160,.55);
 }
-#s-home .btn.big:active{transform:translateY(5px);
+.btn.big:active{transform:translateY(5px);
   box-shadow:
     inset 0 3px 0 rgba(255,255,255,.9),
     inset 0 -10px 14px -12px rgba(206,86,160,.6),
     0 3px 5px -3px rgba(224,122,180,.8),
     0 8px 14px -10px rgba(190,90,160,.5)}
-#s-home .btn.lilac{background:linear-gradient(#FAF5FF 0%,#E7DCFF 55%,#D3C2F6 100%)}
-#s-home .btn.pink {background:linear-gradient(#FFEEF7 0%,#FFCCE6 55%,#FFB2D7 100%)}
-#s-home .btn[disabled]{filter:grayscale(.3) brightness(1.02);opacity:.6}
+.btn.lilac{background:linear-gradient(#FAF5FF 0%,#E7DCFF 55%,#D3C2F6 100%)}
+.btn.pink {background:linear-gradient(#FFEEF7 0%,#FFCCE6 55%,#FFB2D7 100%)}
+.btn[disabled]{filter:grayscale(.3) brightness(1.02);opacity:.6}
 
 /* ── 定石カード。白いすりガラスにして、空にのせる ── */
 #s-home .jcard{
@@ -1381,10 +1387,41 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
 #s-home .review .rv-l{color:var(--ink-btn);text-shadow:none}
 #s-home .review .rv-t svg .ol{stroke:rgba(255,255,255,.9);stroke-width:6}
 #s-home .review .rv-t svg .in{stroke:var(--ink-btn);stroke-width:2.6}
-#s-home .caution{border:1.5px solid var(--glass-line);
+.caution{border:1.5px solid var(--glass-line);
   background:linear-gradient(var(--card), rgba(255,226,241,.8));
   box-shadow:0 8px 16px -9px rgba(190,90,150,.5), inset 0 1.5px 0 #fff}
 
+
+/* ── 淡い面の上に載る文字 ────────────────────────────────
+   面がすりガラスになったので、白抜きのままだと読めない。
+   濃い紫にそろえ、縁取りをやめて、下に白い影だけ置く。
+   自分の色を持つ札・チップ・石・正解トースト・進化の画面は、
+   地が濃いままなので、ここには入れない。                     */
+.ask-title, .zk-title, .mi-name,
+.ask-body, .mi-text, .mi-need, .mi-note,
+.zk-sub, .zk-count,
+.je-label, .je-info,
+.mv-tags .none, .mv-auto-t, .mv-auto-t small,
+.stepper span{
+  color:var(--ink-g);
+  -webkit-text-stroke:0;
+  text-shadow:0 1px 0 rgba(255,255,255,.7);
+}
+.je-info.zero{color:#C4457F}
+:root[data-theme="dark"] .je-info.zero{color:#FFB6D4}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .je-info.zero{color:#FFB6D4}
+}
+/* ずかんの中の小見出しは、少しだけ薄く */
+.zk-sub, .zk-count, .mi-note{color:var(--ink-g2)}
+
+/* ── 縁取りを消す ──────────────────────────────────────
+   .btn.sm や .out.sm のほうが指定が細かく、ふつうに書くと負ける。
+   同じ細かさでもう一度書いて、濃い紫の文字から縁取りを外す。   */
+.btn.sm, .btn.big,
+.ribbon.out, .ask-title.out, .zk-title.out, .mi-name.out, .hud-name.out{
+  -webkit-text-stroke:0;
+}
 
 /* ── ホームの3枚カード ──────────────────────────────────
    参考画像のカードは、色を強く塗った四角ではなく「すりガラスの板」。
