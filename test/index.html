@@ -497,15 +497,18 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
    これまで「枠ぜんたい」だった幅が、いまは「盤そのもの」の幅になるので、
    そのぶん引くと、盤の大きさが前とまったく同じになる。          */
 #s-quiz .boardframe{
-  /* よこは「画面の幅 − 40px」（座標の帯と枠線のぶん）。
-     たては、フレームが上下にはみ出すぶんを入れて 1.326 で割る。
-     割らないと、背の低い画面で下のボタンが下タブに隠れてしまう。 */
-  --bw:min(calc(100% - 40px), max(240px, calc((100svh - 314px) / 1.326)));
+  /* フレームを入れる前と、1pxも変えない。
+     前は「枠ぜんたい」がこの式で、盤はそこから40px
+     （座標の帯10+10・枠線3+3・余白2+2+2+2）を引いた大きさだった。
+     いま .boardframe は盤そのものなので、40px引けば前と同じになる。
+     フレームが画面から切れるぶんには構わない、という方針。      */
+  --bw:calc(min(100%, max(300px, calc(100svh - 314px))) - 40px);
   width:var(--bw);
   display:block;
   /* フレームは盤の外へ出る。上に16.667%、下に15.946%（実測）。
-     そのぶんの場所をあけておかないと、上の「くろの番」の札に重なる */
-  margin:calc(var(--bw) * .16667) auto calc(var(--bw) * .15946);
+     そのぶんの場所をあけておかないと、上の「くろの番」の札に重なる。
+     画面の標準のすきま14pxはもともと空いているので、二重に空けない */
+  margin:calc(var(--bw) * .16667 - 14px) auto calc(var(--bw) * .15946 - 14px);
   padding:0;border:0;background:none;box-shadow:none;
 }
 /* 座標は絵に描いてあるので、文字のほうは出さない */
@@ -522,6 +525,8 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
 /* 絵では盤のまわりに濃い緑のふちがあるが、そこは窓（透明）なので
    絵からは消えている。影で外側に描き足す。影は場所を取らないので
    盤の大きさは変わらない。                                   */
+/* フレームの上のはしが札に少しかぶるので、札を前に出しておく */
+#s-quiz .turnpill{position:relative;z-index:2}
 #s-quiz .board{position:relative;z-index:1;
   box-shadow:0 0 0 4px #3F8E78, 0 0 0 5px rgba(40,90,75,.5)}
 /* よるは、絵をすこし沈めてまわりとなじませる */
