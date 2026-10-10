@@ -8,9 +8,15 @@
      iPhoneは「共有 → ホーム画面に追加」でここの情報を読みます -->
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
-<meta name="theme-color" content="#A08EE0">
+<!-- Safariで見るときの、時計の帯の色。空の絵のいちばん上に合わせる -->
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#8AA9F9">
+<meta name="theme-color" media="(prefers-color-scheme: dark)"  content="#33385A">
+<meta name="theme-color" content="#8AA9F9">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<!-- default だと、時計の帯が不透明な板になって絵が届かない。
+     black-translucent にすると、画面の中身が時計の下まで伸びる。
+     かぶらないよう、.app の上に安全域ぶんの余白を取ってある -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="定石モチベ">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -158,6 +164,8 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
 .num{font-family:"Baloo 2",cursive;font-weight:800;font-variant-numeric:tabular-nums}
 
 .app{max-width:440px;margin:0 auto;min-height:100svh;
+     /* 時計の帯の下まで絵を伸ばすので、中身はそのぶん下げる */
+     padding-top:env(safe-area-inset-top,0px);
      /* 下タブは浮いた島。その高さ＋ゆとりのぶん、本体の下をあける。
         足りないと、いちばん下のカードや説明文が読めなくなる      */
      padding-bottom:calc(124px + env(safe-area-inset-bottom,0px))}
@@ -546,7 +554,8 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
      （座標の帯10+10・枠線3+3・余白2+2+2+2）を引いた大きさだった。
      いま .boardframe は盤そのものなので、40px引けば前と同じになる。
      フレームが画面から切れるぶんには構わない、という方針。      */
-  --bw:calc(min(100%, max(300px, calc(100svh - 314px))) - 40px);
+  --bw:calc(min(100%, max(300px,
+        calc(100svh - 314px - env(safe-area-inset-top,0px)))) - 40px);
   width:var(--bw);
   /* 座標の文字をこの箱に対して置くので、position を立てておく。
      立てないと、％が画面の大きさに対する割合になってしまう */
