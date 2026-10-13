@@ -520,6 +520,21 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
   paint-order:stroke fill;-webkit-text-stroke:2.4px var(--outline)}
 .turnpill .d{width:18px;height:18px;border-radius:50%;border:2.5px solid var(--outline);
   flex-shrink:0;-webkit-text-stroke:0}
+/* クイッククイズの入口。手番の帯と同じ段の、右はしに置く正円。
+   帯の字は真ん中にそろえてあるので、右はしは空いている */
+.mv-turnrow{position:relative}
+.qzbtn{position:absolute;right:4px;top:50%;transform:translateY(-50%);z-index:3;
+  width:38px;height:38px;padding:0;display:grid;place-items:center;
+  border:3px solid var(--outline);border-radius:50%;
+  background:linear-gradient(#FFD2E6,var(--pink));
+  box-shadow:0 4px 0 var(--pink-dk), inset 0 2px 0 rgba(255,255,255,.6);
+  transition:transform .08s, box-shadow .08s}
+.qzbtn[hidden]{display:none}
+.qzbtn:active{transform:translateY(calc(-50% + 3px));box-shadow:0 1px 0 var(--pink-dk)}
+.qzbtn svg{width:19px;height:19px;fill:none;stroke:#fff;stroke-width:3.2;
+  stroke-linecap:round;stroke-linejoin:round;
+  filter:drop-shadow(0 0 1px var(--outline)) drop-shadow(0 0 1px var(--outline))}
+
 .turnpill .d.b{background:linear-gradient(var(--stone-b1),var(--stone-b2))}
 .turnpill .d.w{background:linear-gradient(var(--stone-w1),var(--stone-w2))}
 
@@ -1992,7 +2007,17 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
 
     <!-- ② 再生。一覧から押したときだけ出る -->
     <div class="mv-view" id="mvPlayView" hidden>
-      <div class="turnpill" id="mvTurn"><span class="d b"></span>定石をえらんでください</div>
+      <div class="mv-turnrow">
+        <div class="turnpill" id="mvTurn"><span class="d b"></span>定石をえらんでください</div>
+        <!-- 見たあと、その場で思い出せるか試す -->
+        <button class="qzbtn" id="mvQuizGo" hidden
+                aria-label="クイッククイズ" title="クイッククイズ（記録はつきません）">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8.6 8.8a3.4 3.4 0 1 1 4.6 3.2c-.9.4-1.2 1-1.2 1.9v.5"/>
+            <path d="M12 18.4v.1"/>
+          </svg>
+        </button>
+      </div>
 
       <div class="boardframe">
         <div class="files" id="mvFiles"></div>
@@ -2005,9 +2030,6 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
         <button class="btn sm" id="mvPlay">さいせい</button>
         <button class="btn sm lilac" id="mvNext">1手 ▶</button>
       </div>
-
-      <!-- 見たあと、その場で思い出せるか試す -->
-      <button class="btn sm pink" id="mvQuizGo" hidden>クイッククイズ</button>
 
       <div class="panel field" id="mvQuizBar" hidden>
         <div class="rowbar">
