@@ -2006,6 +2006,20 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
         <button class="btn sm lilac" id="mvNext">1手 ▶</button>
       </div>
 
+      <!-- 見たあと、その場で思い出せるか試す -->
+      <button class="btn sm pink" id="mvQuizGo" hidden>クイッククイズ</button>
+
+      <div class="panel field" id="mvQuizBar" hidden>
+        <div class="rowbar">
+          <button class="btn sm lilac" id="mvQuizHint">ここだよ</button>
+          <button class="btn sm lilac" id="mvQuizAgain">はじめから</button>
+          <button class="btn sm lilac" id="mvQuizStop">やめる</button>
+        </div>
+        <div class="result" id="mvQuizResult" hidden></div>
+        <div class="hint">ここでの正解は記録しません。
+          ようびのくいずにも ★ にも入らない、たしかめるだけのものです。</div>
+      </div>
+
     <!-- 盤に打って録っている間だけ、ここが操作欄になる -->
     <div class="field" id="mvRecBar" hidden>
       <div class="rowbar">
@@ -4943,6 +4957,7 @@ async function mvDelete(j){
 /** 一覧と再生を切り替える */
 function mvShow(which){
   const play = which==="play";
+  if(!play) mvQuizOff();              // 一覧に戻るなら、くいずはここでおしまい
   document.getElementById("mvListView").hidden=play;
   document.getElementById("mvPlayView").hidden=!play;
   const j=movieById(MV.jid);
@@ -4963,6 +4978,11 @@ function mvRender(){
   // まだムービーの盤を作っていないときは、描くものがない
   if(!document.getElementById("mvBoard").children.length) return;
   if(MVREC.on){ mvRecRender(); return; }      // 録っている間は、打った手を映す
+  // くいず中は、答えたところまでを映す。本が消えていたら、あきらめる
+  if(MVQ.on){
+    if(movieById(MV.jid)){ mvQuizRender(); return; }
+    mvQuizOff();
+  }
   const j=movieById(MV.jid);
   useOrigin(MV.jid);         // このムービーだけ f5 に戻す設定なら、ここで立てる
   if(!j){
@@ -4971,6 +4991,7 @@ function mvRender(){
     document.getElementById("mvTurn").innerHTML="定石をえらんでください";
     document.getElementById("mvDelNow").hidden=true;   // 消すものが無い
     document.getElementById("mvTagBox").hidden=true;
+    document.getElementById("mvQuizGo").hidden=true;   // 試すものが無い
     document.getElementById("mvPassBar").hidden=true;
     document.getElementById("mvMsg").innerHTML=
       `<div class="s">下の一覧から定石をえらぶと、ここに手順が出ます</div>`;
@@ -5001,6 +5022,7 @@ function mvRender(){
   document.getElementById("mvDelNow").hidden = !j.movieOnly;
   document.getElementById("mvTagBox").hidden = !j.movieOnly;
   document.getElementById("mvPassBar").hidden = false;
+  document.getElementById("mvQuizGo").hidden = false;
   if(j.movieOnly) mvRenderTags();
 }
 
@@ -5038,6 +5060,7 @@ function mvRecPlay(r,c){
 }
 /** 録るのを始める・やめる */
 function mvRecMode(on){
+  if(on) mvQuizOff();                 // 録るのとくいずは、同時にはできない
   MVREC.on=on;
   if(on){ mvStop(); MVREC.moves=[]; MV.jid=null; MV.k=0; mvShow("play");
           document.getElementById("mvTitle").textContent="盤に打って録る"; }
@@ -5051,10 +5074,148 @@ function mvRecMode(on){
   document.getElementById("mvMaker").hidden=true;
   document.getElementById("mvDelNow").hidden=true;
   document.getElementById("mvRecResult").hidden=true;
+  document.getElementById("mvQuizGo").hidden=true;
   if(!on) document.getElementById("mvRecName").value="";
   mvRender();
   window.scrollTo(0,0);
 }
+
+/* ── クイッククイズ ───────────────────────────────────────
+   ムービーを見たあと、その場で思い出せるかをたしかめる。
+   盤はムービーのものをそのまま使う。
+
+   ここは「たしかめるだけ」の場所なので、
+   S.solved ・ S.dsolved ・ S.att ・ S.run ・ S.pos には何も書かない。
+   ようびの出題やモチの図鑑は、これで動かない。                 */
+const MVQ={on:false, k:0, wrong:0, hint:false, done:false};
+
+/** データの位置をもらって、ムービーの盤のマスを返す */
+const mvCellAt=(r,c)=>{ const [dr,dc]=fRC(r,c); return cellIn("mvBoard",dr,dc); };
+
+/** 盤を押したとき。録っているときと、くいず中だけ受け付ける */
+function mvBoardTap(r,c){
+  if(MVREC.on){ mvRecPlay(r,c); return; }
+  if(MVQ.on){ mvQuizTap(r,c); return; }
+}
+
+/** 下の操作欄を、いまの状態に合わせる */
+function mvQuizBars(){
+  document.getElementById("mvQuizBar").hidden = !MVQ.on;
+  document.getElementById("mvPlayBar").hidden = MVQ.on;
+  document.getElementById("mvSpeed").hidden   = MVQ.on;
+  document.getElementById("mvQuizGo").hidden  = MVQ.on || !movieById(MV.jid);
+}
+
+/** くいずをたたむ。描きなおしは呼んだ側にまかせる */
+function mvQuizOff(){
+  if(!MVQ.on) return;
+  MVQ.on=false; MVQ.k=0; MVQ.wrong=0; MVQ.hint=false; MVQ.done=false;
+  document.getElementById("mvQuizResult").hidden=true;
+  mvQuizBars();
+}
+
+/** くいずを始める・やめる・はじめからやりなおす */
+function mvQuizMode(on){
+  const j=movieById(MV.jid);
+  if(on && (!j || !j.moves.length)) return;      // 本がないときは何もしない
+  mvStop();
+  MVQ.on=on; MVQ.k=0; MVQ.wrong=0; MVQ.hint=false; MVQ.done=false;
+  document.getElementById("mvQuizResult").hidden=true;
+  mvQuizBars();
+  mvRender();
+}
+
+/** いまの局面を盤に描き、あと何手かを出す */
+function mvQuizRender(){
+  const j=movieById(MV.jid);
+  useOrigin(MV.jid);           // このムービーだけ f5 に戻す設定なら、ここで立てる
+  const n=j.moves.length, k=Math.max(0, Math.min(MVQ.k, n));
+  const st=j.states[k];
+  // 「ここだよ」を押したときだけ、次の一手に薄い丸を出す
+  const hint = MVQ.hint && k<n;
+  paintIn("mvBoard", st.board, k>0 ? j.moves[k-1] : null,
+          hint ? st.player : null, hint ? j.moves[k] : null);
+
+  const black=st.player===1;
+  document.getElementById("mvTurn").innerHTML = MVQ.done
+    ? `${n} / ${n}手　思い出せた！`
+    : `<span class="d ${black?"b":"w"}"></span>${black?"くろ":"しろ"}の番　`
+      +`${k+1} / ${n}手目`;
+
+  // まだ答えていない手は隠す。手順が並んで見えていたら、くいずにならない
+  const seq=j.moves.map((m,i)=>
+    `<i class="${i<k?"done":""}${i===k-1?" now":""}">${i+1}${i<k?fSq(m):"？"}</i>`).join("");
+  document.getElementById("mvMsg").innerHTML=
+    `<div class="mv-seq">${seq}</div>`
+    + (MVQ.done
+        ? ""
+        : `<div class="s">思い出した一手を、盤に打ってください`
+          + (MVQ.wrong ? `（まちがえ ${MVQ.wrong}回）` : "") + `</div>`);
+
+  // くいずのあいだは、まわりの操作をしまっておく
+  document.getElementById("mvPassBar").hidden=true;
+  document.getElementById("mvTagBox").hidden=true;
+  document.getElementById("mvDelNow").hidden=true;
+  document.getElementById("mvF5").hidden=true;
+  document.getElementById("mvQuizHint").hidden=MVQ.done;
+}
+
+/** 打てない・ちがうとき。マスを一瞬赤くして知らせる */
+function mvQuizNg(r,c,title,sub){
+  const cell=mvCellAt(r,c);
+  cell.classList.add("ng");
+  setTimeout(()=>cell.classList.remove("ng"),330);
+  showResult("mvQuizResult", false, `✕ <b>${title}</b><br>${sub}`);
+}
+
+/** くいず中の盤を押したとき */
+function mvQuizTap(r,c){
+  const j=movieById(MV.jid);
+  if(!j || MVQ.done) return;
+  useOrigin(MV.jid);         // マスの読みかえに使うので、ここで立て直す
+  const k=MVQ.k, st=j.states[k], sq=toSq(r,c), dsq=fSq(sq);
+
+  if(!flips(st.board,r,c,st.player).length){
+    mvQuizNg(r,c, `${dsq} は打てない`, "石を1枚も裏返せない場所だよ");
+    return;
+  }
+  if(sq!==j.moves[k]){
+    MVQ.wrong++;
+    mvQuizRender();          // まちがえの回数を書きなおす。赤くするのは、このあと
+    mvQuizNg(r,c, `${dsq} じゃないよ`,
+             "打てる手だけど、この手順の手は別のところ");
+    return;
+  }
+
+  // あたり。次の手へ進む。記録には何も書き込まない
+  MVQ.k=k+1; MVQ.hint=false;
+  MVQ.done = MVQ.k>=j.moves.length;
+  mvCellAt(r,c).classList.add("ok");
+  document.getElementById("mvQuizResult").hidden=true;
+  setTimeout(()=>{
+    if(!MVQ.on) return;
+    mvQuizRender();
+    if(MVQ.done){
+      showResult("mvQuizResult", true,
+        MVQ.wrong
+          ? `○ 最後まで思い出せました！`
+            +`<br>まちがえは ${MVQ.wrong}回。もう一度やるなら「はじめから」。`
+          : `◎ ノーミスで思い出せました！`
+            +`<br>この手順は、もう入っています。`);
+    }
+  }, 190);
+}
+
+document.getElementById("mvQuizGo").addEventListener("click",()=>mvQuizMode(true));
+document.getElementById("mvQuizStop").addEventListener("click",()=>mvQuizMode(false));
+document.getElementById("mvQuizAgain").addEventListener("click",()=>mvQuizMode(true));
+document.getElementById("mvQuizHint").addEventListener("click",()=>{
+  if(!MVQ.on || MVQ.done) return;
+  MVQ.hint=true;
+  showResult("mvQuizResult", false,
+    `○ 薄い丸のところが、この手順の次の一手です。`);
+  mvQuizRender();
+});
 
 function mvStop(){
   if(MV.timer){ clearInterval(MV.timer); MV.timer=null; }
@@ -5079,7 +5240,7 @@ function mvAfterEnd(){
 }
 
 function mvLoad(jid){
-  mvStop(); MV.jid=jid; MV.k=0;
+  mvStop(); mvQuizOff(); MV.jid=jid; MV.k=0;   // 別のムービーに移るなら、くいずは終わり
   document.getElementById("mvAdd").hidden=true;
   document.getElementById("mvMaker").hidden=true;
   // 何回見たかを数える。開いた回数ではなく、見た回数として1本につき1
@@ -5236,12 +5397,13 @@ document.getElementById("coinStreak").addEventListener("click",()=>
 document.getElementById("btnToMovie").addEventListener("click",()=>{
   go("movie");
   if(!document.getElementById("mvBoard").children.length)
-    buildBoardDom("mvFiles","mvRanks","mvBoard",mvRecPlay);   // 録るときだけ受け付ける
+    buildBoardDom("mvFiles","mvRanks","mvBoard",mvBoardTap);  // 録るときと、くいずのときだけ
   MV.jid=null; MV.k=0;
   mvShow("list"); mvRenderSpeed(); mvRenderAuto();
 });
 document.getElementById("btnMovieBack").addEventListener("click",()=>{
   mvStop();
+  if(MVQ.on){ mvQuizMode(false); return; }          // くいず中なら、まずくいずをやめる
   if(MVREC.on){ mvRecMode(false); return; }         // 録っている途中なら、まず録るのをやめる
   if(!document.getElementById("mvPlayView").hidden){ mvShow("list"); return; }
   go("home");
