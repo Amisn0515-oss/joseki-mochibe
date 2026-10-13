@@ -4060,6 +4060,44 @@ function questionIndices(j){
   return out;
 }
 
+
+/* ── 定石カードの小さな盤を再生する ──────────────────────
+   初手から、きょう正解したところまでを順に出して、くりかえす。
+   ・1手あたり STEP ミリ秒。おわりで HOLD 回ぶん止めてから、また初手へ
+   ・ホームを離れたら止める。裏で回り続けると、ただ電池を食うだけ
+   ・動きが苦手な人の設定のときは動かさず、正解したところを出したまま */
+const THUMB_STEP=420, THUMB_HOLD=4;
+let thumbTimer=null, thumbCards=[];
+
+function thumbStop(){
+  if(thumbTimer){ clearInterval(thumbTimer); thumbTimer=null; }
+  thumbCards=[];
+}
+
+function thumbPlay(){
+  thumbStop();
+  // ホームを見ていないときは動かさない（renderHome はよそからも呼ばれる）
+  if(!document.getElementById("s-home").classList.contains("on")) return;
+  if(window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  for(const el of document.querySelectorAll("#todayGrid .jthumb[data-jid]")){
+    const j=byId[el.dataset.jid]; if(!j) continue;
+    /* 出だしは定石の1手目から。出題が途中からの定石でも、
+       そこまでの流れが見えたほうが分かりやすい。
+       出題より前の手は、もともと見せている手なので隠す意味もない */
+    const to=thumbPly(j);
+    if(to<=0) continue;
+    el.innerHTML=boardThumb(j, 0);         // まずは1手目の前にもどす
+    thumbCards.push({el, j, from:0, n:to, i:0});
+  }
+  if(!thumbCards.length) return;
+  thumbTimer=setInterval(()=>{
+    for(const c of thumbCards){
+      c.i=(c.i+1)%(c.n+1+THUMB_HOLD);
+      c.el.innerHTML=boardThumb(c.j, c.from+Math.min(c.i, c.n));
+    }
+  }, THUMB_STEP);
+}
+
 /** きょうの正解にそって、小さな盤を何手目まで進めるか。
     続けて正解しているところまで。飛ばして先に正解したぶんは
     出さない（まだ解いていない手を見せると、答えが分かるため）。 */
@@ -4201,8 +4239,8 @@ function renderHome(animate){
       c.innerHTML=(lvLabel(j.lv)
           ? `<span class="lvtag ${lvClass(j.lv)}">${lvLabel(j.lv)}</span>` : "")
         +`<span class="jn">${j.n}</span>`
-        // 中央に、最後の局面の小さな盤。どの定石かが絵で分かる
-        +`<span class="jthumb">${boardThumb(j, thumbPly(j))}</span>`
+        // 中央の小さな盤。初手から、きょう正解したところまでを再生する
+        +`<span class="jthumb" data-jid="${j.id}">${boardThumb(j, thumbPly(j))}</span>`
         +`<span class="jbar"><i style="width:${pct}%"></i><span>${p.done}/${p.all}</span></span>`;
       // 押すと、その定石だけを続きから始める。
       // 長おしすると、せっていを開く（押しっぱなしの間に指が動いたら、やめる）
@@ -4214,6 +4252,7 @@ function renderHome(animate){
       grid.appendChild(c);
     }
   }
+  thumbPlay();                // カードの小さな盤を、初手から再生しはじめる
   updateBookBadge();          // 絵は描かず、本のバッジの数だけ更新する
   const btn=document.getElementById("btnStart");
   /* 書きかえるのはラベルの札だけにする。ボタン全体を textContent で
@@ -4566,6 +4605,7 @@ async function finish(){
    ========================================================================= */
 function go(name){
   ORIGIN_OVR=null;       // 画面を移ったら、1本ぶんの上書きは外す
+  thumbStop();           // カードの小さな盤の再生も止める（裏で回さない）
   for(const s of document.querySelectorAll(".screen")) s.classList.toggle("on", s.id===`s-${name}`);
   if(name!=="movie") document.body.classList.remove("mv-wide");   // 広げるのはムービーの一覧だけ
   // せってい はタブに無くホームから開くので、その間はホームを点灯させておく
