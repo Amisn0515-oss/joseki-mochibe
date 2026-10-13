@@ -2036,8 +2036,6 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
           <button class="btn sm lilac" id="mvQuizStop">やめる</button>
         </div>
         <div class="result" id="mvQuizResult" hidden></div>
-        <div class="hint">ここでの正解は記録しません。
-          ようびのくいずにも ★ にも入らない、たしかめるだけのものです。</div>
       </div>
 
     <!-- 盤に打って録っている間だけ、ここが操作欄になる -->
@@ -4619,13 +4617,32 @@ async function finish(){
     if((S.dperfect||{})[id]) perfect++;
   }
   const miss=missIds().length;
-  await ask("きょうのぶん おわり！",
+  const left=all-done;             // きょうのぶんで、まだ解けていない問題
+  const body=
       `<div class="fin"><b>${done}</b> 問 といた</div>`
     + `<div class="fin"><b>${perfect}</b> 本 パーフェクト</div>`
     + `<div class="fin">★ <b>+${S.today}</b></div>`
+    + (left ? `<div class="fin s">きょうのぶんは、あと <b>${left}</b>問 のこっています。</div>` : "")
     + (miss ? `<div class="fin s">まちがえた定石が ${miss}本 あります。`
-            + `<br>下の「復習する」から、もう一度できます。</div>` : ""),
-    "とじる", false, true);
+            + `<br>下の「復習する」から、もう一度できます。</div>` : "");
+
+  /* 出した列を使いきっても、きょうのぶんが終わったとはかぎらない。
+     （定石カード1枚だけ・復習・ほかの曜日・前の日の続きから始めたとき など）
+     残っているのに「おわり！」と言わない。そのまま続けられるようにする */
+  if(left>0){
+    if(await ask("ここまで といた", body, "のこりをつづける")) startRest();
+    return;
+  }
+  await ask("きょうのぶん おわり！", body, "とじる", false, true);
+}
+
+/** きょうのぶんのうち、まだ解けていない問題だけを続けて出す */
+function startRest(){
+  const list=buildQueue().filter(x=>!(S.dsolved||{})[`${x.jid}:${x.k}`]);
+  if(!list.length) return;
+  lastBandJid=null;
+  Q={list, i:0, revealed:false, answered:false, wrong:0};
+  go("quiz"); showQ();
 }
 
 /* =========================================================================
