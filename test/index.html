@@ -4065,6 +4065,18 @@ function questionIndices(j){
   return out;
 }
 
+/** きょうの正解にそって、小さな盤を何手目まで進めるか。
+    続けて正解しているところまで。飛ばして先に正解したぶんは
+    出さない（まだ解いていない手を見せると、答えが分かるため）。 */
+function thumbPly(j){
+  let k=startIndex(j);                    // まだ1問もなら、出だしの局面
+  for(const q of questionIndices(j)){
+    if(!(S.dsolved||{})[`${j.id}:${q}`]) break;
+    k=q+1;                                // その手は打たれたことにする
+  }
+  return k;
+}
+
 /** きょうのぶんの進み具合。ホームのカードはこちらを見る */
 function dayProgress(j){
   const ks=questionIndices(j);
@@ -4195,7 +4207,7 @@ function renderHome(animate){
           ? `<span class="lvtag ${lvClass(j.lv)}">${lvLabel(j.lv)}</span>` : "")
         +`<span class="jn">${j.n}</span>`
         // 中央に、最後の局面の小さな盤。どの定石かが絵で分かる
-        +`<span class="jthumb">${boardThumb(j)}</span>`
+        +`<span class="jthumb">${boardThumb(j, thumbPly(j))}</span>`
         +`<span class="jbar"><i style="width:${pct}%"></i><span>${p.done}/${p.all}</span></span>`;
       // 押すと、その定石だけを続きから始める。
       // 長おしすると、せっていを開く（押しっぱなしの間に指が動いたら、やめる）
@@ -4708,12 +4720,17 @@ const MVREC={on:false, moves:[]};
    最後の局面を小さな盤で見せ、押すと再生の画面に切り替わる。
    数が多いので、絵は画面に入ったものだけ描く。                 */
 
-/** 最後の局面の小さな盤。空マスは描かず、石だけ置く（軽くするため） */
-function boardThumb(j){
+/**
+ * 小さな盤。空マスは描かず、石だけ置く（軽くするため）
+ * @param ply 何手目の局面を出すか。省くと最後の局面
+ */
+function boardThumb(j, ply){
   /* 一覧の絵は、いろいろな定石が混ざって並ぶ。
      1枚ごとに、その定石の設定で折り返して、描き終わったら戻す */
   const keep=ORIGIN_OVR; useOrigin(j.id);
-  const b=j.states[j.states.length-1].board;
+  const at = (ply==null) ? j.states.length-1
+                         : Math.max(0, Math.min(ply, j.states.length-1));
+  const b=j.states[at].board;
   let st="";
   for(let r=0;r<8;r++) for(let c=0;c<8;c++){
     const v=b[r][c]; if(!v) continue;
