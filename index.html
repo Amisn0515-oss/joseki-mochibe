@@ -3193,26 +3193,60 @@ function famsOf(j){
   return out;
 }
 
-/** 解除に必要な本数。6本が目安だが、6本ないタグは、あるぶん全部でよい。
-    定石を足していけば、条件はひとりでに6本へ上がる。 */
-const FAM_GOAL=6;
-function famNeed(fam){ return Math.max(1, Math.min(FAM_GOAL, libInFam(fam))); }
+/** 解除に必要な本数。どのタグも 3本で固定。
+    アプリが何本持っているかで下げない。収録ぶんをもう覚えている人は、
+    その先の進行や別の進行を自分で足して満たす（どの進行かは自由）。 */
+const FAM_GOAL=3;
+function famNeed(fam){ return FAM_GOAL; }
+
+/* ── 分かれ道 ─────────────────────────────────────────
+   家族の「幹」＝その家族でいちばん短い手順。
+   ある家族の幹が、別の家族の幹の頭にそのまま入っていれば、
+   そちらはこの家族の「先」にあたる。いちばん近い手前を親とする。
+
+   先が2つ以上に分かれている家族のモチは、本数ではなく
+   「その先のモチを2体そろえる」が条件になる。
+   定石を足せば、ここも作り直される。                        */
+const BRANCH_NEED=2;
+let FAMKIDS={};
+function buildBranches(){
+  const base={};
+  for(const j of JOSEKI){
+    const f=familyOf(j.n), m=j.moves.join("");
+    if(base[f]==null || m.length<base[f].length) base[f]=m;
+  }
+  FAMKIDS={};
+  for(const b in base){
+    let best=null;
+    for(const a in base){
+      if(a===b) continue;
+      if(base[b].length>base[a].length && base[b].startsWith(base[a])
+         && (!best || base[a].length>base[best].length)) best=a;
+    }
+    if(best) (FAMKIDS[best]=FAMKIDS[best]||[]).push(b);
+  }
+}
 
 let FAMS=[];
 /* モチの顔ぶれは、収録定石にあるタグで決まる（自作の定石で増えたりはしない）。
    ただし本数を数えるときは、自作の定石もちゃんと入る。                    */
 function buildFamilies(){
+  buildBranches();
   const seen=[];
   for(const j of JOSEKI){ const k=familyOf(j.n); if(!seen.includes(k)) seen.push(k); }
   FAMS=seen.map(k=>{
     const lk=famLook(k);
     let h=0; for(const ch of k) h=(h*31+ch.codePointAt(0))>>>0;
+    // 先が2つ以上に分かれているなら、その先のモチをそろえるのが条件
+    const kids=mergeKeys((FAMKIDS[k]||[]).map(x=>"j:"+x)).filter(x=>x!=="j:"+k);
     return {
       key:"j:"+k, n:k+"もち", fam:k,
-      req:{fam:k},
+      req: kids.length>=BRANCH_NEED ? {kids, need:BRANCH_NEED} : {fam:k},
       w:110+(h%5)*7, h:78+((h>>>4)%4)*8,
       hue:lk.hue|0, parts:lk.parts,
-      note:`${k}のタグが付いた定石を、じゅうぶんおぼえた姿。`,
+      note: kids.length>=BRANCH_NEED
+        ? `${k}から分かれる道を、ひととおり見わたせるようになった姿。`
+        : `${k}のタグが付いた定石を、じゅうぶんおぼえた姿。`,
       chara:MOTIFTEXT[lk.parts[0]] || "まだよく分かっていない子。",
     };
   });
@@ -3233,11 +3267,13 @@ function mergeKeys(a){
 }
 
 /** けいとうのモチ ＋ 定石のモチ。画面はいつもこちらを見る */
-let MOCHI=[];
+let MOCHI=[], MOCHI_AT={};
 function buildMochiList(){
   buildFamilies();
   MOCHI=[...FORMS.map(f=>Object.assign({key:"k:"+f.n, hue:0}, f)),
          ...FAMS.filter(f=>!FAM_MERGE[f.fam])];
+  MOCHI_AT={};
+  MOCHI.forEach((m,i)=>{ MOCHI_AT[m.key]=i; });
 }
 
 /** その定石を「おぼえた」ことにしてよいか（出題されるところを全部当てた） */
@@ -3275,6 +3311,13 @@ function kindsOpen(){
   MOCHI.forEach((f,i)=>{ if(f.req && f.req.tag && formOpen(i)) c++; });
   return c;
 }
+/** その先のモチを、いま何体そろえているか。
+    先の先まではたどらない（その子自身の条件のなかで見るので、自然につながる）*/
+function kidsOpen(keys){
+  let c=0;
+  for(const k of keys){ const i=MOCHI_AT[k]; if(i!=null && formOpen(i)) c++; }
+  return c;
+}
 /** その姿に出会えているか */
 function formOpen(i){
   const m=MOCHI[i];
@@ -3283,18 +3326,31 @@ function formOpen(i){
   // 一度出会ったモチは、あとで定石を足して条件が上がっても、いなくならない
   if(Array.isArray(S.seenForms) && S.seenForms.includes(m.key)) return true;
   if(r.kinds!=null) return kindsOpen()>=r.kinds;      // けいとうを何種類そろえたか
+  if(r.kids) return kidsOpen(r.kids)>=r.need;        // その先のモチを何体そろえたか
   if(r.fam)  return masteredInFam(r.fam)>=famNeed(r.fam);   // そのタグを何本おぼえたか
   return masteredIn(r.tag)>=r.need;                   // その系統を何本おぼえたか
+}
+/** その先のモチの名前を並べる */
+function kidNames(keys){
+  return keys.map(k=>{ const i=MOCHI_AT[k]; return i==null ? null : MOCHI[i].n; })
+             .filter(Boolean);
 }
 /** 出会うための条件を、そのまま文にする */
 function reqText(i){
   const r=MOCHI[i] && MOCHI[i].req;
   if(!r) return "さいしょからいる";
   if(r.kinds!=null) return `けいとうのモチ ${r.kinds}種るい`;
+  if(r.kids){
+    const nm=kidNames(r.kids);
+    return nm.length===r.need
+      ? `その先の ${nm.join(" と ")} をそろえる`
+      : `その先のモチを ${r.need}体（${nm.slice(0,3).join("・")}${nm.length>3?"…":""}）`;
+  }
   if(r.fam){
     const need=famNeed(r.fam), have=libInFam(r.fam);
-    return need>=FAM_GOAL ? `${r.fam}のタグを ${need}本`
-                          : `${r.fam}のタグを ${need}本（いま${have}本）`;
+    // 足りないときは、自分で足すぶんが要ると分かるように持ち数も出す
+    return have>=need ? `${r.fam}のタグを ${need}本`
+                      : `${r.fam}のタグを ${need}本（アプリにあるのは${have}本）`;
   }
   return `${r.tag}${r.tag==="ローズ"?"":"系"}を ${r.need}本`;
 }
@@ -3305,6 +3361,7 @@ function reqProgress(i){
   const cap=(have,need)=>({have:Math.min(have,need), need});
   if(!r) return {have:1, need:1};
   if(r.kinds!=null) return cap(kindsOpen(), r.kinds);
+  if(r.kids) return cap(kidsOpen(r.kids), r.need);
   if(r.fam) return cap(masteredInFam(r.fam), famNeed(r.fam));
   return cap(masteredIn(r.tag), r.need);
 }
@@ -3372,7 +3429,7 @@ if(!Array.isArray(S.seenForms)){
 function nextGoal(){
   let best=null;
   MOCHI.forEach((f,i)=>{
-    if(!f.req || f.req.fam || formOpen(i)) return;
+    if(!f.req || f.fam || formOpen(i)) return;
     const pg=reqProgress(i), rate=pg.have/pg.need;
     if(!best || rate>best.rate) best={rate, i, have:pg.have, need:pg.need};
   });
@@ -3801,7 +3858,7 @@ renderHome(false);
       }
       openMochiInfo(i);
     });
-    ((f.req && f.req.fam) ? (g2||g1) : g1).appendChild(b);
+    (f.fam ? (g2||g1) : g1).appendChild(b);
   });
   document.getElementById("colCount").textContent =
     `${MOCHI.length}体のうち ${got}体に出会いました`
@@ -3821,12 +3878,24 @@ function openMochiInfo(i){
   document.getElementById("miNote").textContent  =
     open ? f.note
          : (f.req && f.req.tag) ? TAGNOTE[f.req.tag]
+         : (f.req && f.req.kids) ? `${f.fam}から分かれる道のモチを ${f.req.need}体そろえると出会えます`
          : (f.req && f.req.fam) ? `${f.req.fam}のタグが付いた定石を ${famNeed(f.req.fam)}本おぼえると出会えます`
          : "";
   // 定石のモチは、必要な定石をそのまま並べて見せる。どれが残っているか分かるように
   const list=document.getElementById("miList");
   const fam=f.req && f.req.fam ? f.req.fam : null;
-  list.hidden=!fam;
+  const kids=f.req && f.req.kids ? f.req.kids : null;
+  list.hidden=!fam && !kids;
+  if(kids){
+    // その先のモチを並べる。どれがそろっているか分かるように
+    list.innerHTML=kids.map(k=>{
+      const i=MOCHI_AT[k], got=i!=null && formOpen(i);
+      return `<i class="${got?"got":""}">${i==null?"？？？":MOCHI[i].n}`
+            +`<b>${got?"✓":"まだ"}</b></i>`;
+    }).join("")
+    + `<i style="background:none;border:0;justify-content:center;opacity:.85">`
+    + `このうち ${f.req.need}体そろえると出会えます</i>`;
+  }
   if(fam){
     const rows=LIB.filter(j=>famsOf(j).has(fam))
       .sort((a,b)=>a.moves.length-b.moves.length);
