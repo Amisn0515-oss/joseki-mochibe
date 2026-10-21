@@ -892,6 +892,12 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
 
 /* 自作の絵を進化演出の影として出すときの見せかた */
 .as-shadow{filter:brightness(0) invert(1)}
+/* 限界突破のパズル。まだ開いていないマスを覆う板。
+   すりガラスにして、下の絵がうっすら透けるようにしてある */
+.evo-pz{fill:var(--panel);stroke:var(--outline);stroke-width:2;opacity:.93}
+.evo-pz-in{fill:#fff;opacity:.34}
+/* 限界突破のモチは、そろう前から色のまま見せる（どこまで開いたかを見せたいので） */
+.colcell.locked.pzcell svg{filter:none;opacity:1}
 
 /* けいとうのしぼりこみ。数が多いので、折りかえして並べる */
 .tagbar{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin:2px 0 1px}
@@ -2227,6 +2233,8 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
         <div class="colgrid" id="colGrid"></div>
         <div class="zk-sub">定石のモチ</div>
         <div class="colgrid" id="colGridF"></div>
+        <div class="zk-sub">限界突破</div>
+        <div class="colgrid" id="colGridE"></div>
       </div>
       <div class="zk-count" id="colCount"></div>
       <button class="btn sm lilac" id="zkClose">とじる</button>
@@ -3266,14 +3274,69 @@ function mergeKeys(a){
   }))];
 }
 
-/** けいとうのモチ ＋ 定石のモチ。画面はいつもこちらを見る */
+/* ── 限界突破 ──────────────────────────────────────────
+   分かれ道の手前のモチには、その先をぜんぶ集めたときの姿がある。
+   条件は「その先のモチを ぜんぶ」。そのエリアを制覇した証なので、
+   何体かではなく、ぜんぶにしてある。                        */
+const EVOS=[
+  {fam:"兎", base:"k:うさぎもち", n:"【限界突破】超☆うさぎもち",
+   chara:"うさぎの道を、どこまでも先まで見わたせる。耳が12方向に向いている。"},
+  {fam:"虎", base:"k:とらもち",   n:"【限界突破】超☆とらもち",
+   chara:"虎の分かれ道をぜんぶ知っている。どの道を選んでも、もう迷わない。"},
+  {fam:"牛", base:"j:牛",         n:"【限界突破】超☆牛もち",
+   chara:"牛の三つの道を、ぜんぶ踏み固めた。どっしりの上に、さらにどっしり。"},
+];
+
+/** けいとうのモチ ＋ 定石のモチ ＋ 限界突破のモチ。画面はいつもこちらを見る */
 let MOCHI=[], MOCHI_AT={};
 function buildMochiList(){
   buildFamilies();
   MOCHI=[...FORMS.map(f=>Object.assign({key:"k:"+f.n, hue:0}, f)),
          ...FAMS.filter(f=>!FAM_MERGE[f.fam])];
+  // 限界突破は、元のモチの形に かがやきの飾りを重ねた姿にしておく。
+  // 専用の絵ができたら、mochi/ に足すだけで差しかわる
+  for(const e of EVOS){
+    const kids=mergeKeys((FAMKIDS[e.fam]||[]).map(x=>"j:"+x)).filter(k=>k!=="j:"+e.fam);
+    const b=MOCHI.find(m=>m.key===e.base);
+    if(!b || kids.length<2) continue;
+    MOCHI.push({
+      key:"e:"+e.fam, n:e.n, fam:e.fam, evo:true, base:e.base,
+      w:(b.w||120)+8, h:(b.h||86)+10, hue:b.hue|0,
+      parts:[...(b.parts||[]), "wings", "crown"],
+      req:{kids, need:kids.length},
+      note:`${b.n}が、その先の道をぜんぶ見わたせるようになった姿。`,
+      chara:e.chara,
+    });
+  }
   MOCHI_AT={};
   MOCHI.forEach((m,i)=>{ MOCHI_AT[m.key]=i; });
+}
+
+/** パズルのマスが開く順番。ばらばらに見えて、いつも同じ並びになるようにする */
+function evoOrder(t){
+  return [...Array(t).keys()].sort((a,b)=>((a*2654435761)%97)-((b*2654435761)%97));
+}
+/** 絵を置く場所。どのモチでも同じ四角にして、カードをめくる形にそろえる */
+const EVOBOX={x:12, y:44, w:176, h:190};
+/** まだ開いていないところを、板で覆う */
+function evoPuzzle(g, f){
+  if(!f || !f.evo || !g) return;
+  const keys=f.req.kids, n=keys.length, got=kidsOpen(keys);
+  if(got>=n) return;                       // ぜんぶ開いたら、覆いは消える
+  // マスは絵ぜんたいを覆う数にする。1体ぶんが2マスになることもある
+  const cols=Math.max(2, Math.round(Math.sqrt(n))), rows=Math.ceil(n/cols);
+  const t=cols*rows, ord=evoOrder(t);
+  const cw=EVOBOX.w/cols, ch=EVOBOX.h/rows;
+  const from=Math.floor(got*t/n);          // ここから先が、まだ覆われているマス
+  let html="";
+  for(let i=from;i<t;i++){
+    const c=ord[i], x=EVOBOX.x+(c%cols)*cw, y=EVOBOX.y+Math.floor(c/cols)*ch;
+    html+=`<rect class="evo-pz" x="${(x+1).toFixed(1)}" y="${(y+1).toFixed(1)}" `
+        + `width="${(cw-2).toFixed(1)}" height="${(ch-2).toFixed(1)}" rx="5"/>`
+        + `<rect class="evo-pz-in" x="${(x+5).toFixed(1)}" y="${(y+5).toFixed(1)}" `
+        + `width="${(cw-10).toFixed(1)}" height="${((ch-10)*0.3).toFixed(1)}" rx="3"/>`;
+  }
+  g.insertAdjacentHTML("beforeend", html);
 }
 
 /** その定石を「おぼえた」ことにしてよいか（出題されるところを全部当てた） */
@@ -3342,6 +3405,8 @@ function reqText(i){
   if(r.kinds!=null) return `けいとうのモチ ${r.kinds}種るい`;
   if(r.kids){
     const nm=kidNames(r.kids);
+    if(r.need>=r.kids.length && r.kids.length>3)
+      return `その先の道を ぜんぶ（${r.need}体）`;
     return nm.length===r.need
       ? `その先の ${nm.join(" と ")} をそろえる`
       : `その先のモチを ${r.need}体（${nm.slice(0,3).join("・")}${nm.length>3?"…":""}）`;
@@ -3825,9 +3890,10 @@ function updateBookBadge(){
 /* ── モチずかん ────────────────────────────────────────
    まだ出会っていない姿は影で出す。押すと一体ごとの紹介が開く。      */
 function renderCollection(){
-  const g1=document.getElementById("colGrid"), g2=document.getElementById("colGridF");
+  const g1=document.getElementById("colGrid"), g2=document.getElementById("colGridF"),
+        g3=document.getElementById("colGridE");
   if(!g1) return;
-  g1.innerHTML=""; if(g2) g2.innerHTML="";
+  g1.innerHTML=""; if(g2) g2.innerHTML=""; if(g3) g3.innerHTML="";
   let got=0;
   const cur=curForm(), shown=curForms();
   MOCHI.forEach((f,i)=>{
@@ -3841,9 +3907,10 @@ function renderCollection(){
         ? `<span class="colchk${onHome?" on":""}" role="checkbox"
                  aria-checked="${onHome}" aria-label="ホームに出す">✓</span>` : "")
       +`<svg viewBox="0 24 200 226"><g></g></svg>`
-      +`<span class="cname">${open?f.n:"？？？"}</span>`
+      +`<span class="cname">${open||f.evo?f.n:"？？？"}</span>`
       +`<span class="cneed">${open?(onHome?"ホームに出てる":"であった"):`${pg.have}/${pg.need}`}</span>`;
     buildMochi(b.querySelector("svg g"), i, false);
+    if(f.evo){ b.classList.add("pzcell"); evoPuzzle(b.querySelector("svg g"), f); }
     b.addEventListener("click",e=>{
       // チェックだけを押したときは、紹介を開かずに切りかえる
       if(open && e.target.classList.contains("colchk")){
@@ -3858,7 +3925,7 @@ renderHome(false);
       }
       openMochiInfo(i);
     });
-    (f.fam ? (g2||g1) : g1).appendChild(b);
+    (f.evo ? (g3||g2||g1) : f.fam ? (g2||g1) : g1).appendChild(b);
   });
   document.getElementById("colCount").textContent =
     `${MOCHI.length}体のうち ${got}体に出会いました`
@@ -3870,11 +3937,15 @@ renderHome(false);
 function openMochiInfo(i){
   const f=MOCHI[i], open=formOpen(i), pg=reqProgress(i);
   buildMochi(document.getElementById("miG"), i, false);
-  document.getElementById("miSvg").style.filter = open ? "" : "brightness(0) opacity(.3)";
-  document.getElementById("miName").textContent  = open ? f.n : "？？？";
+  if(f.evo) evoPuzzle(document.getElementById("miG"), f);
+  // 限界突破は、そろう前から色のまま見せる。どこまで開いたかが見どころなので
+  document.getElementById("miSvg").style.filter =
+    (open||f.evo) ? "" : "brightness(0) opacity(.3)";
+  document.getElementById("miName").textContent  = (open||f.evo) ? f.n : "？？？";
   document.getElementById("miNeed").textContent  =
     f.req ? `${reqText(i)}　${pg.have}/${pg.need}` : reqText(i);
-  document.getElementById("miChara").textContent = open ? (f.chara||"") : "まだ ひみつ";
+  document.getElementById("miChara").textContent =
+    open ? (f.chara||"") : f.evo ? "そろえたぶんだけ、姿が見えてきます" : "まだ ひみつ";
   document.getElementById("miNote").textContent  =
     open ? f.note
          : (f.req && f.req.tag) ? TAGNOTE[f.req.tag]
