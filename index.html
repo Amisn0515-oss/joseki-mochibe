@@ -3216,7 +3216,7 @@ function famNeed(fam){ return FAM_GOAL; }
    「その先のモチを2体そろえる」が条件になる。
    定石を足せば、ここも作り直される。                        */
 const BRANCH_NEED=2;
-let FAMKIDS={};
+let FAMKIDS={}, FAMANC={};
 function buildBranches(){
   const base={};
   for(const j of JOSEKI){
@@ -3233,6 +3233,27 @@ function buildBranches(){
     }
     if(best) (FAMKIDS[best]=FAMKIDS[best]||[]).push(b);
   }
+  /* 定石そのものが持っている「親」の情報からも、上下関係を拾っておく。
+     手順の頭合わせでは拾えない並び（途中で手が入れ替わる変化）があるため */
+  FAMANC={};
+  const nameOf={};
+  for(const j of JOSEKI) nameOf[j.id]=j.n;
+  for(const j of JOSEKI){
+    const f=familyOf(j.n);
+    for(const id of (j.anc||[])){
+      const a=nameOf[id] ? familyOf(nameOf[id]) : null;
+      if(!a || a===f) continue;
+      if(!FAMANC[a]) FAMANC[a]=[];
+      if(!FAMANC[a].includes(f)) FAMANC[a].push(f);
+    }
+  }
+}
+/** その家族から先にある家族を、ぜんぶ集める（孫もひ孫も） */
+function famAll(f, seen){
+  seen=seen||new Set();
+  for(const k of [...(FAMKIDS[f]||[]), ...(FAMANC[f]||[])])
+    if(k!==f && !seen.has(k)){ seen.add(k); famAll(k, seen); }
+  return seen;
 }
 
 let FAMS=[];
@@ -3296,7 +3317,9 @@ function buildMochiList(){
   // 限界突破は、元のモチの形に かがやきの飾りを重ねた姿にしておく。
   // 専用の絵ができたら、mochi/ に足すだけで差しかわる
   for(const e of EVOS){
-    const kids=mergeKeys((FAMKIDS[e.fam]||[]).map(x=>"j:"+x)).filter(k=>k!=="j:"+e.fam);
+    // すぐ下の分かれ道だけでなく、その先にある家族をぜんぶ数える
+    const kids=mergeKeys([...famAll(e.fam)].map(x=>"j:"+x))
+      .filter(k=>k!=="j:"+e.fam && k!==e.base);
     const b=MOCHI.find(m=>m.key===e.base);
     if(!b || kids.length<2) continue;
     MOCHI.push({
