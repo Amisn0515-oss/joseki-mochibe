@@ -3612,7 +3612,7 @@ function loadMochiImages(){
     .then(r=>r.ok ? r.json() : Promise.reject(r.status))
     .then(j=>{
       const out={};
-      for(const k in j){ const v=j[k]; out[k]=[v[0], v[1], v[2], MOCHI_DIR+v[3]]; }
+      for(const k in j){ const v=j[k]; out[k]=[v[0], v[1], v[2], MOCHI_DIR+v[3], v[4]]; }
       MOCHI_IMG=out;
       // 足りない絵を、係に静かにためてもらう（電波がなくても出るように）
       try{ navigator.serviceWorker.controller.postMessage({t:"keepImages"}); }catch(_){}
@@ -3622,8 +3622,11 @@ function loadMochiImages(){
     .catch(()=>{});                // 読めなくても、図形の姿でちゃんと動く
 }
 
-/** 絵のモチを置く高さ。どの子も同じにして、並べたときの大小をなくす */
-const PIC_H=88;
+/* 絵のモチの大きさは「見える面積」でそろえる。
+   高さでそろえると、横に広い絵や、頭の上に飾りが多い絵が小さく見えるため。
+   PIC_AREA … 目標の面積（色がついている点の数）。いまの平均に合わせてある
+   PIC_H    … 面積が分からない絵のための、昔ながらの決めかた           */
+const PIC_AREA=15100, PIC_H=88;
 
 function buildMochi(g, f, sil){
   g.innerHTML="";
@@ -3644,7 +3647,9 @@ function buildMochi(g, f, sil){
        名残で、名前から 78/86/94/102 のどれかを選んでいただけ。
        絵になったいまは、同じ大きさの子が並んだほうが見やすい。
        そのうえで、横が198を超えるなら横に合わせる（枠から出さない）  */
-    const sc=Math.min((PIC_H*1.45)/(ih*ft), 198/iw);
+    const px=pic[4];
+    const sc=px ? Math.min(Math.sqrt(PIC_AREA/px), 198/iw, 186/ih)
+                : Math.min((PIC_H*1.45)/(ih*ft), 198/iw);
     const w=iw*sc, h=ih*sc;
     /* 白いからだが下の色に溶けてしまうので、足の下にうすい影を敷く。
        これが無いと、台の上に立っているのか浮いているのか分からない */
