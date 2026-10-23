@@ -3221,11 +3221,21 @@ function famsOf(j){
   return out;
 }
 
+/* ── まだ本番に出していない仕掛け ──────────────────────
+   きまったら true にするだけで、そのまま効くようにしてある。
+   NEW_UNLOCK … 解除条件を「5本で固定」＋「分かれ道の手前は、その先のモチ」にする
+   EVO_ON     … 限界突破のモチと、少しずつ開くパズルを出す            */
+const NEW_UNLOCK=false;
+const EVO_ON=false;
+
 /** 解除に必要な本数。どのタグも 5本で固定。
     アプリが何本持っているかで下げない。収録ぶんをもう覚えている人は、
     その先の進行や別の進行を自分で足して満たす（どの進行かは自由）。 */
 const FAM_GOAL=5;
-function famNeed(fam){ return FAM_GOAL; }
+/* 切っているあいだは、前のきまり（あるぶん全部。多くても6本）で数える */
+function famNeed(fam){
+  return NEW_UNLOCK ? FAM_GOAL : Math.max(1, Math.min(6, libInFam(fam)));
+}
 
 /* ── 分かれ道 ─────────────────────────────────────────
    家族の「幹」＝その家族でいちばん短い手順。
@@ -3287,7 +3297,8 @@ function buildFamilies(){
     const lk=famLook(k);
     let h=0; for(const ch of k) h=(h*31+ch.codePointAt(0))>>>0;
     // 先が2つ以上に分かれているなら、その先のモチをそろえるのが条件
-    const kids=mergeKeys((FAMKIDS[k]||[]).map(x=>"j:"+x)).filter(x=>x!=="j:"+k);
+    const kids=NEW_UNLOCK
+      ? mergeKeys((FAMKIDS[k]||[]).map(x=>"j:"+x)).filter(x=>x!=="j:"+k) : [];
     return {
       key:"j:"+k, n:k+"もち", fam:k,
       req: kids.length>=BRANCH_NEED ? {kids, need:BRANCH_NEED} : {fam:k},
@@ -3336,7 +3347,7 @@ function buildMochiList(){
          ...FAMS.filter(f=>!FAM_MERGE[f.fam])];
   // 限界突破は、元のモチの形に かがやきの飾りを重ねた姿にしておく。
   // 専用の絵ができたら、mochi/ に足すだけで差しかわる
-  for(const e of EVOS){
+  for(const e of (EVO_ON ? EVOS : [])){
     // すぐ下の分かれ道だけでなく、その先にある家族をぜんぶ数える
     const kids=mergeKeys([...famAll(e.fam)].map(x=>"j:"+x))
       .filter(k=>k!=="j:"+e.fam && k!==e.base);
