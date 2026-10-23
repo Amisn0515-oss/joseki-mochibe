@@ -766,6 +766,14 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
 .tgchip{font-size:9.5px;padding:1px 7px;border-radius:99px;flex-shrink:0;
   font-weight:800;color:#4B3A80;border:2px solid var(--outline);
   background:#EFE7FF;line-height:1.5;white-space:nowrap}
+/* この定石だけ f5始点で出している、という札。
+   e6始点にしている人にだけ出る（f5始点の人には、付ける意味がない） */
+.f5mk{display:inline-block;vertical-align:middle;margin-right:5px;
+  font-size:9.5px;padding:1px 7px;border-radius:99px;flex-shrink:0;
+  font-family:"Baloo 2",cursive;font-weight:800;line-height:1.5;white-space:nowrap;
+  color:#0D5C49;border:2px solid var(--outline);
+  background:linear-gradient(#BFF3E4,var(--mint));
+  -webkit-text-stroke:0}
 .tgchip.usagi{background:#FFD9EA}
 .tgchip.tora {background:#FFDCA6}
 .tgchip.neko {background:#FFE9B8}
@@ -2380,6 +2388,8 @@ const originSq = () => effOrigin();
 /** その1本を、いま何始点で出すか。
     e6設定のときだけ、1本ずつ f5 に戻せる                */
 const originOf = id => (ORIGIN==="e6" && (S.jf5||{})[id]) ? "f5" : ORIGIN;
+/** 名前の隣に出す札。e6始点のまま出しているものには、何も付けない */
+const f5Chip = id => originOf(id)!==ORIGIN ? `<span class="f5mk">f5</span>` : "";
 /** その1本ぶんの上書きを立てる。f5設定の人は、いつも素通り */
 const useOrigin = id => { ORIGIN_OVR = (originOf(id)==="f5" && ORIGIN==="e6") ? "f5" : null; };
 const originSample = () => fKifu("f5d6c5f4e3c6d3f6e6d7");
@@ -4390,7 +4400,7 @@ function renderHome(animate){
                  +((S.dperfect||{})[id] ? " shine" : "");   // きょう出したぶんだけ光る
       c.innerHTML=(lvLabel(j.lv)
           ? `<span class="lvtag ${lvClass(j.lv)}">${lvLabel(j.lv)}</span>` : "")
-        +`<span class="jn">${j.n}</span>`
+        +`<span class="jn">${f5Chip(j.id)}${j.n}</span>`
         // 中央の小さな盤。1手目から最後までをくりかえし再生する。
         // 動かさない設定のときは、ここに出る最後の局面がそのまま残る
         +`<span class="jthumb" data-jid="${j.id}">${boardThumb(j)}</span>`
@@ -4450,9 +4460,9 @@ function resumeIndex(list){
 }
 
 /** 定石名の帯を1回流す */
-function showNameBand(name){
+function showNameBand(name, id){
   const el=document.getElementById("nameBand");
-  document.getElementById("bandTxt").textContent=name;
+  document.getElementById("bandTxt").innerHTML=(id?f5Chip(id):"")+name;
   el.hidden=false;
   el.classList.remove("run");
   void el.offsetWidth;                      // いったん止めて、頭から流し直す
@@ -4533,7 +4543,7 @@ function showQ(){
   useOrigin(q.jid);          // この定石だけ f5 に戻す設定なら、ここで立てる
   Q.revealed=false; Q.answered=false; Q.wrong=0;
 
-  document.getElementById("qName").textContent=j.n;
+  document.getElementById("qName").innerHTML=f5Chip(j.id)+j.n;
   document.getElementById("qLeft").textContent=Q.list.length-Q.i;
   document.getElementById("qBar").style.width=`${(Q.i/Q.list.length)*100}%`;
   document.getElementById("qBarTxt").textContent=`${Q.i+1} / ${Q.list.length}問`;
@@ -4562,7 +4572,7 @@ function showQ(){
   save();
   if(q.jid!==lastBandJid){                  // 定石が変わったときだけ帯を流す
     lastBandJid=q.jid;
-    showNameBand(j.n);
+    showNameBand(j.n, j.id);
   }
   document.getElementById("btnReveal").style.display="";
   document.getElementById("btnNext").style.display="none";
@@ -5033,7 +5043,7 @@ function mvCard(j){
   a.className="mv-card"+(j.id===MV.jid?" now":"")+(j.movieOnly?" mine":"");
   a.innerHTML=`<span class="mv-thumb" data-jid="${j.id}"></span>`
     +`<span class="mv-meta">`
-    +  `<span class="mv-name">${j.n}</span>`
+    +  `<span class="mv-name">${f5Chip(j.id)}${j.n}</span>`
     +  `<span class="mv-sub">`
     +    `<span class="tgchip ${toriClass(toriOf(j))}">${toriOf(j)}</span>`
     +    (j.movieOnly ? `<span class="tgchip jibun">じぶん</span>` : "")
@@ -5132,8 +5142,8 @@ function mvShow(which){
   document.getElementById("mvListView").hidden=play;
   document.getElementById("mvPlayView").hidden=!play;
   const j=movieById(MV.jid);
-  document.getElementById("mvTitle").textContent =
-    play && j ? j.n : "定石ムービー";
+  document.getElementById("mvTitle").innerHTML =
+    play && j ? f5Chip(j.id)+j.n : "定石ムービー";
   document.body.classList.toggle("mv-wide", !play);
   if(!play){ mvStop(); mvRenderList(); }
   window.scrollTo(0,0);
@@ -5724,7 +5734,7 @@ function renderReg(){
     row.className="regrow"+(selMode?"":" tapable");
     row.innerHTML=(selMode?`<input type="checkbox" ${selected.has(id)?"checked":""}>`:"")
       +(lvLabel(j.lv) ? `<span class="lvchip ${lvClass(j.lv)}">${lvLabel(j.lv)}</span>` : "")
-      +`<span class="rmain"><span class="nm">${j.n}</span>`
+      +`<span class="rmain"><span class="nm">${f5Chip(id)}${j.n}</span>`
       +`<span class="rsub">${tagChip(j)}`
       +((at>1||sd!=="both")?``
         +(at>1?`<span class="atchip">${at}手目〜</span>`:"")
