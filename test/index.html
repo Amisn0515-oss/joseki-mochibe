@@ -3622,6 +3622,9 @@ function loadMochiImages(){
     .catch(()=>{});                // 読めなくても、図形の姿でちゃんと動く
 }
 
+/** 絵のモチを置く高さ。どの子も同じにして、並べたときの大小をなくす */
+const PIC_H=88;
+
 function buildMochi(g, f, sil){
   g.innerHTML="";
   if(typeof f==="number") f=MOCHI[f];       // 番号で呼ばれても動くようにしておく
@@ -3636,9 +3639,12 @@ function buildMochi(g, f, sil){
   const pic=MOCHI_IMG[f.key];
   if(pic){
     const iw=pic[0], ih=pic[1], ft=pic[2];
-    /* 足もとから上を、からだ(f.h)の1.45倍に。飾りがあるぶん少し大きい。
+    /* 足もとから上を、いつも同じ高さにする。
+       もとは家族ごとの f.h に合わせていたが、f.h は図形で描いていたころの
+       名残で、名前から 78/86/94/102 のどれかを選んでいただけ。
+       絵になったいまは、同じ大きさの子が並んだほうが見やすい。
        そのうえで、横が198を超えるなら横に合わせる（枠から出さない）  */
-    const sc=Math.min((f.h*1.45)/(ih*ft), 198/iw);
+    const sc=Math.min((PIC_H*1.45)/(ih*ft), 198/iw);
     const w=iw*sc, h=ih*sc;
     /* 白いからだが下の色に溶けてしまうので、足の下にうすい影を敷く。
        これが無いと、台の上に立っているのか浮いているのか分からない */
