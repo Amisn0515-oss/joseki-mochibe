@@ -3241,10 +3241,16 @@ const EVO_ON=false;
     アプリが何本持っているかで下げない。収録ぶんをもう覚えている人は、
     その先の進行や別の進行を自分で足して満たす（どの進行かは自由）。 */
 const FAM_GOAL=5;
-/* 切っているあいだは、前のきまり（あるぶん全部。多くても6本）で数える */
+/* どのタグも、最低3本はおぼえてもらう。
+   アプリに3本入っていないタグは、自分で登録して3本にする（下の案内を出す）。
+   3本より多く持っているタグは、今までどおり、あるぶん全部（最大6本）。 */
+const FAM_MIN=3;
 function famNeed(fam){
-  return NEW_UNLOCK ? FAM_GOAL : Math.max(1, Math.min(6, libInFam(fam)));
+  return NEW_UNLOCK ? FAM_GOAL
+                    : Math.max(FAM_MIN, Math.min(6, libInFam(fam)));
 }
+/** 3本に足りないとき、あと何本つくればよいか（足りていれば 0） */
+function famShort(fam){ return Math.max(0, famNeed(fam) - libInFam(fam)); }
 
 /* ── 分かれ道 ─────────────────────────────────────────
    家族の「幹」＝その家族でいちばん短い手順。
@@ -4020,11 +4026,15 @@ function openMochiInfo(i){
     f.req ? `${reqText(i)}　${pg.have}/${pg.need}` : reqText(i);
   document.getElementById("miChara").textContent =
     open ? (f.chara||"") : f.evo ? "そろえたぶんだけ、姿が見えてきます" : "まだ ひみつ";
-  document.getElementById("miNote").textContent  =
+  const short = (f.req && f.req.fam) ? famShort(f.req.fam) : 0;
+  document.getElementById("miNote").innerHTML =
     open ? f.note
          : (f.req && f.req.tag) ? TAGNOTE[f.req.tag]
          : (f.req && f.req.kids) ? `${f.fam}から分かれる道のモチを ${f.req.need}体そろえると出会えます`
-         : (f.req && f.req.fam) ? `${f.req.fam}のタグが付いた定石を ${famNeed(f.req.fam)}本おぼえると出会えます`
+         : (f.req && f.req.fam)
+             ? `${f.req.fam}のタグが付いた定石を ${famNeed(f.req.fam)}本おぼえると出会えます`
+               + (short ? `<br><b>このタグの定石は、いまアプリに ${libInFam(f.req.fam)}本しかありません。`
+                        + `「＋定石を追加」から、このタグの定石を あと${short}本 つくってください。</b>` : "")
          : "";
   // 定石のモチは、必要な定石をそのまま並べて見せる。どれが残っているか分かるように
   const list=document.getElementById("miList");
@@ -4049,7 +4059,10 @@ function openMochiInfo(i){
       return `<i class="${done?"got":""}">${j.n}<b>${done?"✓":`${pg.done}/${pg.all}`}</b></i>`;
     }).join("")
     + `<i style="background:none;border:0;justify-content:center;opacity:.85">`
-    + `このタグを ${famNeed(fam)}本おぼえると出会えます</i>`;
+    + `このタグを ${famNeed(fam)}本おぼえると出会えます</i>`
+    + (famShort(fam)
+        ? `<i style="background:none;border:0;justify-content:center;opacity:.95">`
+          + `あと ${famShort(fam)}本、このタグの定石をつくってください</i>` : "");
   }
 
   // 出会っている姿なら、その姿に着がえられる
