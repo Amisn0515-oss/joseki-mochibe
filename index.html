@@ -4973,7 +4973,9 @@ document.getElementById("btnBkIn").addEventListener("click",async ()=>{
 /* ── 定石ムービー ────────────────────────────────────────
    いま何手目まで進んだかを MV.k で持つ。盤は定石データの各局面を
    そのまま描くだけなので、計算はいらない。                          */
-const MV={jid:null, k:0, timer:null, speed:800, tag:"すべて"};
+const MV={jid:null, k:0, timer:null, speed:800, tag:"すべて", hold:0};
+/** 終わりの盤を、このまわし数だけ見せてから頭に戻す */
+const MV_HOLD=2;
 /* 盤に打って録っている間の手順。録り終えるまで、どこにも残さない */
 const MVREC={on:false, moves:[]};
 
@@ -5531,8 +5533,15 @@ function mvPlayPause(){
   if(!j){ mvRender(); return; }
   if(MV.timer){ mvStop(); mvRender(); return; }
   if(MV.k>=j.moves.length) MV.k=0;          // 終わっていたら頭から
+  MV.hold=0;
   MV.timer=setInterval(()=>{
-    if(MV.k>=j.moves.length){ mvStop(); mvRender(); mvAfterEnd(); return; }
+    if(MV.k>=j.moves.length){
+      // じどうさいせいが入っていれば、今までどおり次の定石へ移る
+      if(S.mvAuto){ mvStop(); mvRender(); mvAfterEnd(); return; }
+      // 入っていなければ、終わりの盤を少し見せてから、また初手へ
+      if(MV.hold<MV_HOLD){ MV.hold++; return; }
+      MV.hold=0; MV.k=0; mvRender(); return;
+    }
     MV.k++; mvRender();
   }, MV.speed);
   mvRender();
