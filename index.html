@@ -784,6 +784,19 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
   :root:not([data-theme="light"]) .f5mk{color:#D7FFF1;background:rgba(63,183,149,.38);
     box-shadow:inset 0 0 0 1px rgba(255,255,255,.3)}
 }
+/* ムービーをさがす。右上の虫めがねと、押すと開く入力欄 */
+.mv-find{width:40px;height:40px;flex-shrink:0;padding:7px;border:0;
+  border-radius:50%;background:var(--glass);
+  -webkit-backdrop-filter:blur(8px) saturate(1.3);backdrop-filter:blur(8px) saturate(1.3);
+  box-shadow:inset 0 0 0 1.5px var(--glass-line), 0 3px 8px -4px rgba(75,58,128,.5)}
+.mv-find:active{transform:translateY(2px)}
+.mv-find img{display:block;width:100%;height:100%;object-fit:contain}
+.mv-find[aria-pressed="true"]{background:linear-gradient(#FFD2E6,var(--pink))}
+.mv-findbox{display:flex;gap:7px;align-items:center}
+.mv-findbox[hidden]{display:none}
+.mv-findbox .tin{flex:1;min-width:0;font-size:16px;padding:9px 12px}
+/* ボタンは中身の幅だけにする（ふつうのボタンは横いっぱいに広がるため） */
+.mv-findbox .btn{flex:0 0 auto;width:auto;padding:9px 15px}
 .tgchip.usagi{background:#FFD9EA}
 .tgchip.tora {background:#FFDCA6}
 .tgchip.neko {background:#FFE9B8}
@@ -1947,10 +1960,16 @@ body.typing .tabs{transform:translateY(130%)}   /* 入力中は引っこめる *
         <svg viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></svg>
       </button>
       <div class="out sm qtitle" id="mvTitle">定石ムービー</div>
+      <button class="mv-find" id="btnMvFind" aria-label="さがす" aria-pressed="false" hidden>
+        <img src="data:image/webp;base64,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" alt=""></button>
     </div>
 
     <!-- ① 一覧。さいしょに出るのはこちら -->
     <div class="mv-view" id="mvListView">
+      <div class="mv-findbox" id="mvFindBox" hidden>
+        <input class="tin" id="mvFind" type="search" placeholder="定石の名前でさがす">
+        <button class="btn sm lilac" id="mvFindClear">けす</button>
+      </div>
       <div class="tagbar" id="mvTag"></div>
       <div class="seg mv-sort" id="mvSort">
         <button data-v="new">あたらしい順</button>
@@ -4973,7 +4992,7 @@ document.getElementById("btnBkIn").addEventListener("click",async ()=>{
 /* ── 定石ムービー ────────────────────────────────────────
    いま何手目まで進んだかを MV.k で持つ。盤は定石データの各局面を
    そのまま描くだけなので、計算はいらない。                          */
-const MV={jid:null, k:0, timer:null, speed:800, tag:"すべて", hold:0};
+const MV={jid:null, k:0, timer:null, speed:800, tag:"すべて", hold:0, q:""};
 /** 終わりの盤を、このまわし数だけ見せてから頭に戻す */
 const MV_HOLD=2;
 /* 盤に打って録っている間の手順。録り終えるまで、どこにも残さない */
@@ -5043,6 +5062,12 @@ function addedAt(j, i){
 }
 function mvItems(){
   let list=movieList();
+  // さがす言葉があれば、まずそこで絞る。名前と、自分で付けたタグを見る
+  if(MV.q){
+    const q=MV.q.toLowerCase();
+    list=list.filter(j=>j.n.toLowerCase().includes(q)
+                     || tagsOfMovie(j.id).some(t=>t.toLowerCase().includes(q)));
+  }
   if(MV.tag==="じぶん")           list=list.filter(j=>j.movieOnly);
   else if(MV.tag.startsWith("u:")){
     const want=MV.tag.slice(2);
@@ -5159,8 +5184,9 @@ function mvRenderList(){
   for(const j of items) box.appendChild(mvCard(j));
   // 「じぶん」で絞っているときに、うち何本と書くのはくどい
   const mine=(S.movies||[]).length;
-  document.getElementById("mvCount").textContent=
-    `${items.length}本` + (mine && MV.tag!=="じぶん" ? `（うち じぶんのもの ${mine}本）` : "");
+  document.getElementById("mvCount").textContent = MV.q
+    ? `「${MV.q}」で ${items.length}本`
+    : `${items.length}本` + (mine && MV.tag!=="じぶん" ? `（うち じぶんのもの ${mine}本）` : "");
 }
 
 /** いま見ているものの次を何本か出す */
@@ -5193,6 +5219,7 @@ function mvShow(which){
   document.getElementById("mvTitle").innerHTML =
     play && j ? f5Chip(j.id)+j.n : "定石ムービー";
   document.body.classList.toggle("mv-wide", !play);
+  document.getElementById("btnMvFind").hidden=play;   // さがせるのは一覧のときだけ
   if(!play){ mvStop(); mvRenderList(); }
   window.scrollTo(0,0);
 }
@@ -5645,6 +5672,21 @@ document.getElementById("btnMovieBack").addEventListener("click",()=>{
   go("home");
 });
 document.getElementById("mvBackToList").addEventListener("click",()=>{ mvStop(); mvShow("list"); });
+
+/* ── さがす ────────────────────────────────────────── */
+function mvFindShow(on){
+  const box=document.getElementById("mvFindBox"), b=document.getElementById("btnMvFind");
+  box.hidden=!on;
+  b.setAttribute("aria-pressed", on ? "true" : "false");
+  if(on) document.getElementById("mvFind").focus();
+  else { MV.q=""; document.getElementById("mvFind").value=""; mvRenderList(); }
+}
+document.getElementById("btnMvFind").addEventListener("click",()=>
+  mvFindShow(document.getElementById("mvFindBox").hidden));
+document.getElementById("mvFind").addEventListener("input",e=>{
+  MV.q=e.target.value.trim(); mvRenderList();
+});
+document.getElementById("mvFindClear").addEventListener("click",()=>mvFindShow(false));
 /* ── この手順を、よそへ持っていく ── */
 document.getElementById("mvCopyKifu").addEventListener("click",e=>{
   const j=movieById(MV.jid); if(!j) return;
